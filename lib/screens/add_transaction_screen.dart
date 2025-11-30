@@ -16,7 +16,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
 
   String _selectedCategory = 'Makan';
   String _type = 'expense';
-  DateTime _selectedDate = DateTime.now(); // Default hari ini
+  DateTime _selectedDate = DateTime.now(); 
 
   // Fungsi Memunculkan Kalender
   Future<void> _pickDate() async {
