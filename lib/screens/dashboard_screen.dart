@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
 import '../services/auth_service.dart';
 import '../services/firestore_service.dart';
@@ -125,9 +124,8 @@ class DashboardScreen extends StatelessWidget {
                                   Container(
                                     padding: const EdgeInsets.all(10),
                                     decoration: BoxDecoration(
-                                      color: const Color(
-                                        0xFF7C4DFF,
-                                      ).withOpacity(0.1),
+                                      color: const Color(0xFF7C4DFF)
+                                          .withOpacity(0.1),
                                       shape: BoxShape.circle,
                                     ),
                                     child: const Icon(
@@ -138,7 +136,7 @@ class DashboardScreen extends StatelessWidget {
                                   const SizedBox(width: 12),
                                   Column(
                                     crossAxisAlignment:
-                                        CrossAxisAlignment.start,
+                                    CrossAxisAlignment.start,
                                     children: [
                                       const Text(
                                         'Family Balance',
@@ -177,9 +175,8 @@ class DashboardScreen extends StatelessWidget {
                               // Total Balance Logic
                               if (user.partnerId != null)
                                 FutureBuilder<UserModel?>(
-                                  future: firestoreService.getUser(
-                                    user.partnerId!,
-                                  ),
+                                  future:
+                                  firestoreService.getUser(user.partnerId!),
                                   builder: (context, partnerSnapshot) {
                                     final partnerBalance =
                                         partnerSnapshot.data?.balance ?? 0.0;
@@ -188,7 +185,7 @@ class DashboardScreen extends StatelessWidget {
 
                                     return Column(
                                       crossAxisAlignment:
-                                          CrossAxisAlignment.start,
+                                      CrossAxisAlignment.start,
                                       children: [
                                         Text(
                                           NumberFormat.currency(
@@ -207,7 +204,7 @@ class DashboardScreen extends StatelessWidget {
                                         const SizedBox(height: 16),
                                         Row(
                                           mainAxisAlignment:
-                                              MainAxisAlignment.spaceBetween,
+                                          MainAxisAlignment.spaceBetween,
                                           children: [
                                             _buildSubBalance(
                                               'My Balance',
@@ -253,11 +250,156 @@ class DashboardScreen extends StatelessWidget {
                         ),
                       ),
 
-                      const SizedBox(height: 30),
+                      const SizedBox(height: 20),
+
+                      // QUICK ACTIONS
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 12,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(24),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.04),
+                                blurRadius: 14,
+                                offset: const Offset(0, 6),
+                              ),
+                            ],
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              _quickAction(
+                                icon: Icons.add_circle_outline,
+                                label: 'Top Up',
+                                color: const Color(0xFF4F46E5),
+                                onTap: () {
+                                  // TODO: aksi Top Up
+                                },
+                              ),
+                              _quickAction(
+                                icon: Icons.send_rounded,
+                                label: 'Send',
+                                color: const Color(0xFFEC4899),
+                                onTap: () {
+                                  // TODO: aksi Send
+                                },
+                              ),
+                              _quickAction(
+                                icon: Icons.request_page_outlined,
+                                label: 'Request',
+                                color: const Color(0xFF10B981),
+                                onTap: () {
+                                  // TODO: aksi Request
+                                },
+                              ),
+                              _quickAction(
+                                icon: Icons.history,
+                                label: 'History',
+                                color: const Color(0xFFF59E0B),
+                                onTap: () {
+                                  // TODO: aksi History
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+
+                      const SizedBox(height: 24),
+
+                      // PAYMENT LIST
+                      Padding(
+                        padding:
+                        const EdgeInsets.symmetric(horizontal: 24.0),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: const [
+                            Text(
+                              'Payment List',
+                              style: TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.black87,
+                              ),
+                            ),
+                            Text(
+                              'See more',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Colors.blue,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Padding(
+                        padding:
+                        const EdgeInsets.symmetric(horizontal: 20.0),
+                        child: GridView.count(
+                          shrinkWrap: true,
+                          physics: const NeverScrollableScrollPhysics(),
+                          crossAxisCount: 4,
+                          mainAxisSpacing: 12,
+                          crossAxisSpacing: 12,
+                          children: const [
+                            _PaymentItem(
+                              icon: Icons.wifi,
+                              label: 'Internet',
+                              color: Color(0xFF6366F1),
+                            ),
+                            _PaymentItem(
+                              icon: Icons.flash_on,
+                              label: 'Electricity',
+                              color: Color(0xFFF97316),
+                            ),
+                            _PaymentItem(
+                              icon: Icons.card_giftcard,
+                              label: 'Voucher',
+                              color: Color(0xFF22C55E),
+                            ),
+                            _PaymentItem(
+                              icon: Icons.health_and_safety,
+                              label: 'Assurance',
+                              color: Color(0xFF06B6D4),
+                            ),
+                            _PaymentItem(
+                              icon: Icons.phone_android,
+                              label: 'Mobile',
+                              color: Color(0xFFE11D48),
+                            ),
+                            _PaymentItem(
+                              icon: Icons.receipt_long,
+                              label: 'Bill',
+                              color: Color(0xFF0EA5E9),
+                            ),
+                            _PaymentItem(
+                              icon: Icons.storefront,
+                              label: 'Merchant',
+                              color: Color(0xFFA855F7),
+                            ),
+                            _PaymentItem(
+                              icon: Icons.more_horiz,
+                              label: 'More',
+                              color: Color(0xFF9CA3AF),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      const SizedBox(height: 24),
 
                       // Recent Transactions Header
                       Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 24.0),
+                        padding:
+                        const EdgeInsets.symmetric(horizontal: 24.0),
                         child: Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
@@ -304,7 +446,8 @@ class DashboardScreen extends StatelessWidget {
                           return ListView.builder(
                             shrinkWrap: true,
                             physics: const NeverScrollableScrollPhysics(),
-                            padding: const EdgeInsets.symmetric(horizontal: 20),
+                            padding:
+                            const EdgeInsets.symmetric(horizontal: 20),
                             itemCount: transactions.length,
                             itemBuilder: (context, index) {
                               final tx = transactions[index];
@@ -348,7 +491,7 @@ class DashboardScreen extends StatelessWidget {
                                     Expanded(
                                       child: Column(
                                         crossAxisAlignment:
-                                            CrossAxisAlignment.start,
+                                        CrossAxisAlignment.start,
                                         children: [
                                           Text(
                                             tx.category,
@@ -359,9 +502,8 @@ class DashboardScreen extends StatelessWidget {
                                           ),
                                           const SizedBox(height: 4),
                                           Text(
-                                            DateFormat(
-                                              'dd MMM yyyy',
-                                            ).format(tx.date),
+                                            DateFormat('dd MMM yyyy')
+                                                .format(tx.date),
                                             style: TextStyle(
                                               color: Colors.grey[600],
                                               fontSize: 12,
@@ -410,22 +552,111 @@ class DashboardScreen extends StatelessWidget {
       ),
     );
   }
+}
 
-  Widget _buildSubBalance(String label, double amount) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+Widget _buildSubBalance(String label, double amount) {
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text(label, style: const TextStyle(color: Colors.grey, fontSize: 12)),
+      const SizedBox(height: 4),
+      Text(
+        NumberFormat.currency(
+          locale: 'id_ID',
+          symbol: 'Rp ',
+          decimalDigits: 0,
+        ).format(amount),
+        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+      ),
+    ],
+  );
+}
+
+Widget _quickAction({
+  required IconData icon,
+  required String label,
+  required Color color,
+  VoidCallback? onTap,
+}) {
+  return InkWell(
+    onTap: onTap,
+    borderRadius: BorderRadius.circular(16),
+    child: Column(
+      mainAxisSize: MainAxisSize.min,
       children: [
-        Text(label, style: const TextStyle(color: Colors.grey, fontSize: 12)),
-        const SizedBox(height: 4),
+        Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: color.withOpacity(0.12),
+            shape: BoxShape.circle,
+          ),
+          child: Icon(icon, color: color, size: 20),
+        ),
+        const SizedBox(height: 6),
         Text(
-          NumberFormat.currency(
-            locale: 'id_ID',
-            symbol: 'Rp ',
-            decimalDigits: 0,
-          ).format(amount),
-          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+          label,
+          style: const TextStyle(fontSize: 11, color: Colors.black87),
         ),
       ],
+    ),
+  );
+}
+
+class _PaymentItem extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+
+  const _PaymentItem({
+    super.key,
+    required this.icon,
+    required this.label,
+    required this.color,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(18),
+      onTap: () {
+
+      },
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(18),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.02),
+              blurRadius: 8,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.12),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(icon, color: color, size: 20),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              label,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 11,
+                color: Colors.black87,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
