@@ -50,7 +50,7 @@ class _BalanceScreenState extends State<BalanceScreen> {
           return StreamBuilder<List<TransactionModel>>(
             stream: firestoreService.getTransactionsStream(
               user.uid,
-              user.partnerId,
+              user.collaborators, // <-- Pakai collaborators (List)
             ),
             builder: (context, snapshot) {
               if (snapshot.connectionState == ConnectionState.waiting) {
@@ -231,7 +231,7 @@ class _BalanceScreenState extends State<BalanceScreen> {
                                 value: _selectedPeriod,
                                 dropdownColor: Colors.white,
                                 underline: const SizedBox.shrink(),
-                                style: const TextStyle(color: Colors.white),
+                                style: const TextStyle(color: Colors.black),
                                 iconEnabledColor: Colors.white,
                                 items: const [
                                   DropdownMenuItem(

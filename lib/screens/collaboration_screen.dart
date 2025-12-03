@@ -11,75 +11,32 @@ class CollaborationScreen extends StatefulWidget {
 }
 
 class _CollaborationScreenState extends State<CollaborationScreen> {
-  final _emailController = TextEditingController();
+  final TextEditingController _emailController = TextEditingController();
   bool _isLoading = false;
-  String _message = '';
-  UserModel? _foundUser;
 
-  @override
-  void dispose() {
-    _emailController.dispose();
-    super.dispose();
-  }
+  void _addPartner() async {
+    if (_emailController.text.isEmpty) return;
 
-  Future<void> _searchUser() async {
-    setState(() {
-      _isLoading = true;
-      _message = '';
-      _foundUser = null;
-    });
-
+    setState(() => _isLoading = true);
     try {
-      final user = await context.read<FirestoreService>().searchUserByEmail(_emailController.text.trim());
-      setState(() {
-        _foundUser = user;
-        if (user == null) {
-          _message = 'User not found';
+      final firestoreService = context.read<FirestoreService>();
+      final currentUser = await firestoreService.getUserStream().first;
+
+      if (currentUser != null) {
+        await firestoreService.addCollaborator(currentUser.uid, _emailController.text.trim());
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Berhasil menambahkan anggota grup!')),
+          );
+          _emailController.clear();
         }
-      });
+      }
     } catch (e) {
-      setState(() => _message = 'Error: $e');
-    } finally {
-      setState(() => _isLoading = false);
-    }
-  }
-
-  Future<void> _sendRequest() async {
-    if (_foundUser == null) return;
-    setState(() => _isLoading = true);
-    try {
-      await context.read<FirestoreService>().sendCollaborationRequest(_foundUser!.uid);
-      setState(() {
-        _message = 'Request sent to ${_foundUser!.email}';
-        _foundUser = null;
-        _emailController.clear();
-      });
-    } catch (e) {
-      setState(() => _message = 'Error: $e');
-    } finally {
-      setState(() => _isLoading = false);
-    }
-  }
-
-  Future<void> _acceptRequest(String requesterUid) async {
-    setState(() => _isLoading = true);
-    try {
-      await context.read<FirestoreService>().acceptCollaborationRequest(requesterUid);
-      setState(() => _message = 'Connected successfully!');
-    } catch (e) {
-      setState(() => _message = 'Error: $e');
-    } finally {
-      setState(() => _isLoading = false);
-    }
-  }
-
-  Future<void> _rejectRequest() async {
-    setState(() => _isLoading = true);
-    try {
-      await context.read<FirestoreService>().rejectCollaborationRequest();
-      setState(() => _message = 'Request rejected');
-    } catch (e) {
-      setState(() => _message = 'Error: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Gagal: $e')),
+        );
+      }
     } finally {
       setState(() => _isLoading = false);
     }
@@ -87,114 +44,77 @@ class _CollaborationScreenState extends State<CollaborationScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final firestoreService = context.watch<FirestoreService>();
-    
+    final firestoreService = context.read<FirestoreService>();
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Collaboration')),
+      appBar: AppBar(title: const Text("Grup Kolaborasi")),
       body: StreamBuilder<UserModel?>(
         stream: firestoreService.getUserStream(),
         builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
+          if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
 
-          final currentUser = snapshot.data;
-          if (currentUser == null) return const Center(child: Text('Error loading user'));
+          final user = snapshot.data!;
 
-          if (currentUser.partnerId != null) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.check_circle, color: Colors.green, size: 64),
-                  const SizedBox(height: 16),
-                  const Text('You are connected with a partner!'),
-                  const SizedBox(height: 8),
-                  FutureBuilder<UserModel?>(
-                    future: firestoreService.getUser(currentUser.partnerId!),
-                    builder: (context, partnerSnapshot) {
-                      if (partnerSnapshot.hasData) {
-                        return Text('Partner: ${partnerSnapshot.data!.email}');
-                      }
-                      return const Text('Loading partner info...');
-                    },
-                  ),
-                ],
-              ),
-            );
-          }
-
-          return SingleChildScrollView(
+          return Padding(
             padding: const EdgeInsets.all(16.0),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                if (currentUser.pendingRequestFrom != null) ...[
-                  Card(
-                    color: Colors.orange.shade100,
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Column(
-                        children: [
-                          const Text('Pending Request', style: TextStyle(fontWeight: FontWeight.bold)),
-                          const SizedBox(height: 8),
-                          FutureBuilder<UserModel?>(
-                            future: firestoreService.getUser(currentUser.pendingRequestFrom!),
-                            builder: (context, reqSnapshot) {
-                              if (reqSnapshot.hasData) {
-                                return Text('${reqSnapshot.data!.email} wants to connect.');
-                              }
-                              return const Text('Loading requester info...');
-                            },
-                          ),
-                          const SizedBox(height: 16),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                            children: [
-                              ElevatedButton(
-                                onPressed: _isLoading ? null : () => _acceptRequest(currentUser.pendingRequestFrom!),
-                                child: const Text('Accept'),
-                              ),
-                              OutlinedButton(
-                                onPressed: _isLoading ? null : _rejectRequest,
-                                child: const Text('Reject'),
-                              ),
-                            ],
-                          ),
-                        ],
+                const Text("Tambah Anggota", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _emailController,
+                        decoration: const InputDecoration(
+                          labelText: "Email Teman",
+                          border: OutlineInputBorder(),
+                        ),
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 24),
-                ],
-
-                const Text('Invite Partner', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: _emailController,
-                  decoration: InputDecoration(
-                    labelText: 'Partner Email',
-                    suffixIcon: IconButton(
-                      icon: const Icon(Icons.search),
-                      onPressed: _isLoading ? null : _searchUser,
+                    const SizedBox(width: 10),
+                    ElevatedButton(
+                      onPressed: _isLoading ? null : _addPartner,
+                      child: _isLoading ? const CircularProgressIndicator() : const Text("Add"),
                     ),
+                  ],
+                ),
+                const SizedBox(height: 30),
+                const Text("Anggota Grup Saat Ini:", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 10),
+
+                // List Anggota
+                Expanded(
+                  child: FutureBuilder<List<UserModel>>(
+                    future: firestoreService.getUsersByIds(user.collaborators),
+                    builder: (context, snapFriends) {
+                      if (snapFriends.connectionState == ConnectionState.waiting) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
+                      final friends = snapFriends.data ?? [];
+
+                      if (friends.isEmpty) {
+                        return const Center(child: Text("Belum ada anggota lain."));
+                      }
+
+                      return ListView.builder(
+                        itemCount: friends.length,
+                        itemBuilder: (context, index) {
+                          final friend = friends[index];
+                          return Card(
+                            child: ListTile(
+                              leading: const CircleAvatar(child: Icon(Icons.person)),
+                              title: Text(friend.displayName ?? friend.email),
+                              subtitle: Text(friend.email),
+                              trailing: Text("Rp ${friend.balance.toStringAsFixed(0)}"),
+                            ),
+                          );
+                        },
+                      );
+                    },
                   ),
                 ),
-                if (_foundUser != null) ...[
-                  const SizedBox(height: 16),
-                  ListTile(
-                    title: Text(_foundUser!.displayName ?? 'No Name'),
-                    subtitle: Text(_foundUser!.email),
-                    trailing: ElevatedButton(
-                      onPressed: _isLoading ? null : _sendRequest,
-                      child: const Text('Send Request'),
-                    ),
-                  ),
-                ],
-                if (_message.isNotEmpty) ...[
-                  const SizedBox(height: 16),
-                  Text(_message, style: TextStyle(color: _message.startsWith('Error') ? Colors.red : Colors.green)),
-                ],
               ],
             ),
           );

@@ -1,160 +1,137 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-
 import '../models/user_model.dart';
-import '../models/daily_finance_summary.dart';
+import '../models/transaction_model.dart';
 
 class FirestoreService {
-  final FirebaseFirestore firestore = FirebaseFirestore.instance;
-  final FirebaseAuth auth = FirebaseAuth.instance;
+  final FirebaseFirestore _db = FirebaseFirestore.instance;
+  final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  // ================= USER =================
+  // ================= USER METHODS =================
 
+  // Mendapatkan data user saat ini secara Realtime
   Stream<UserModel?> getUserStream() {
-    final user = auth.currentUser;
-    if (user == null) return const Stream.empty();
-    return firestore
-        .collection('users')
-        .doc(user.uid)
-        .snapshots()
-        .map((doc) {
-      if (!doc.exists) return null;
+    final user = _auth.currentUser;
+    if (user == null) return Stream.value(null);
+
+    return _db.collection('users').doc(user.uid).snapshots().map((doc) {
+      if (doc.exists) {
+        return UserModel.fromFirestore(doc);
+      }
+      return null;
+    });
+  }
+
+  // Mendapatkan data satu user berdasarkan ID (Sekali panggil)
+  Future<UserModel?> getUser(String uid) async {
+    final doc = await _db.collection('users').doc(uid).get();
+    if (doc.exists) {
       return UserModel.fromFirestore(doc);
+    }
+    return null;
+  }
+
+  // [BARU] Mendapatkan data BANYAK user sekaligus (Untuk fitur Grup/Family Balance)
+  Future<List<UserModel>> getUsersByIds(List<String> ids) async {
+    if (ids.isEmpty) return [];
+
+    // Firestore membatasi 'whereIn' maksimal 10 ID.
+    // Kita ambil 10 pertama saja untuk keamanan.
+    List<String> chunk = ids.length > 10 ? ids.sublist(0, 10) : ids;
+
+    final snapshot = await _db
+        .collection('users')
+        .where(FieldPath.documentId, whereIn: chunk)
+        .get();
+
+    return snapshot.docs.map((doc) => UserModel.fromFirestore(doc)).toList();
+  }
+
+  // Mencari user lain berdasarkan Email (Untuk Add Partner)
+  Future<UserModel?> searchUserByEmail(String email) async {
+    final snapshot = await _db
+        .collection('users')
+        .where('email', isEqualTo: email)
+        .limit(1)
+        .get();
+
+    if (snapshot.docs.isNotEmpty) {
+      return UserModel.fromFirestore(snapshot.docs.first);
+    }
+    return null;
+  }
+
+  // ================= COLLABORATION METHODS =================
+
+  // [BARU] Menambah teman kolaborasi
+  Future<void> addCollaborator(String currentUid, String newPartnerEmail) async {
+    // 1. Cari user berdasarkan email
+    final targetUser = await searchUserByEmail(newPartnerEmail);
+
+    if (targetUser == null) {
+      throw Exception('Email tidak ditemukan');
+    }
+    if (targetUser.uid == currentUid) {
+      throw Exception('Tidak bisa menambahkan diri sendiri');
+    }
+
+    // 2. Update user kita: Tambahkan ID teman ke list 'collaborators'
+    await _db.collection('users').doc(currentUid).update({
+      'collaborators': FieldValue.arrayUnion([targetUser.uid])
+    });
+
+    // 3. Update user teman: Tambahkan ID kita ke list mereka
+    await _db.collection('users').doc(targetUser.uid).update({
+      'collaborators': FieldValue.arrayUnion([currentUid])
     });
   }
 
-  Future<void> updateUserDisplayName(String newName) async {
-    final user = auth.currentUser;
-    if (user == null) throw Exception('No logged in user');
+  // ================= TRANSACTION METHODS =================
 
-    await firestore.collection('users').doc(user.uid).update({
-      'displayName': newName,
-    });
+  // Menambah Transaksi & Update Saldo Otomatis
+  Future<void> addTransaction(TransactionModel transaction) async {
+    final batch = _db.batch();
+    final transactionRef = _db.collection('transactions').doc(); // Auto-Generate ID
 
-    await user.updateDisplayName(newName);
+    // 1. Simpan data transaksi
+    batch.set(transactionRef, transaction.toMap());
+
+    // 2. Update saldo user (Balance)
+    final userRef = _db.collection('users').doc(transaction.userId);
+
+    if (transaction.type == 'expense') {
+      // Kalau pengeluaran, saldo berkurang
+      batch.update(userRef, {'balance': FieldValue.increment(-transaction.amount)});
+    } else {
+      // Kalau pemasukan, saldo bertambah
+      batch.update(userRef, {'balance': FieldValue.increment(transaction.amount)});
+    }
+
+    // Jalankan kedua perintah di atas secara bersamaan
+    await batch.commit();
   }
 
-  // ================= DAILY SUMMARY =================
+  // [BARU] Mengambil List Transaksi (Gabungan Saya + Teman Kolaborasi)
+  // Parameter ke-2 sekarang adalah List<String>, BUKAN String?
+  Stream<List<TransactionModel>> getTransactionsStream(String myUid, List<String> collaboratorIds) {
+    // Gabungkan ID saya dengan ID teman-teman
+    List<String> allIds = [myUid, ...collaboratorIds];
 
-  Stream<DailyFinanceSummary> getDailySummary({
-    required String userId,
-    DateTime? date,
-  }) {
-    final targetDate = date ?? DateTime.now();
-    final start = DateTime(targetDate.year, targetDate.month, targetDate.day);
-    final end = start.add(const Duration(days: 1));
+    // Batasan Firestore: 'whereIn' maksimal 10 item
+    if (allIds.length > 10) {
+      allIds = allIds.sublist(0, 10);
+    }
 
-    final incomeQuery = firestore
+    return _db
         .collection('transactions')
-        .where('userId', isEqualTo: userId)
-        .where('type', isEqualTo: 'income')
-        .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(start))
-        .where('date', isLessThan: Timestamp.fromDate(end));
-
-    final expenseQuery = firestore
-        .collection('transactions')
-        .where('userId', isEqualTo: userId)
-        .where('type', isEqualTo: 'expense')
-        .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(start))
-        .where('date', isLessThan: Timestamp.fromDate(end));
-
-    final userDoc = firestore.collection('users').doc(userId).snapshots();
-
-    return incomeQuery.snapshots().asyncMap((incomeSnap) async {
-      final expenseSnap = await expenseQuery.get();
-      final user = await userDoc.first;
-
-      final incomeToday = incomeSnap.docs.fold<double>(
-        0,
-            (sum, doc) => sum + (doc['amount'] as num).toDouble(),
-      );
-      final expenseToday = expenseSnap.docs.fold<double>(
-        0,
-            (sum, doc) => sum + (doc['amount'] as num).toDouble(),
-      );
-      final totalBalance =
-          (user.data()?['balance'] as num?)?.toDouble() ?? 0.0;
-
-      return DailyFinanceSummary(
-        date: targetDate,
-        incomeToday: incomeToday,
-        expenseToday: expenseToday,
-        totalBalance: totalBalance,
-      );
-    });
-  }
-
-  Stream<List<CategoryAmount>> getCategoryBreakdown({
-    required String userId,
-    required String type, // 'income' atau 'expense'
-    DateTime? date,
-  }) {
-    final targetDate = date ?? DateTime.now();
-    final start = DateTime(targetDate.year, targetDate.month, targetDate.day);
-    final end = start.add(const Duration(days: 1));
-
-    final query = firestore
-        .collection('transactions')
-        .where('userId', isEqualTo: userId)
-        .where('type', isEqualTo: type)
-        .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(start))
-        .where('date', isLessThan: Timestamp.fromDate(end));
-
-    return query.snapshots().map((snap) {
-      final Map<String, double> map = {};
-      for (final doc in snap.docs) {
-        final category = (doc['category'] as String?) ?? 'Lainnya';
-        final amount = (doc['amount'] as num).toDouble();
-        map[category] = (map[category] ?? 0) + amount;
-      }
-      return map.entries
-          .map((e) => CategoryAmount(name: e.key, amount: e.value))
-          .toList();
-    });
-  }
-
-  Stream<List<DailyFinanceSummary>> getHistory({
-    required String userId,
-    required int days,
-  }) {
-    final now = DateTime.now();
-    final start = DateTime(now.year, now.month, now.day)
-        .subtract(Duration(days: days - 1));
-
-    final query = firestore
-        .collection('transactions')
-        .where('userId', isEqualTo: userId)
-        .where('date', isGreaterThanOrEqualTo: Timestamp.fromDate(start));
-
-    return query.snapshots().map((snap) {
-      final Map<DateTime, Map<String, double>> map = {};
-
-      for (final doc in snap.docs) {
-        final ts = doc['date'] as Timestamp;
-        final d = ts.toDate();
-        final key = DateTime(d.year, d.month, d.day);
-        final type = doc['type'] as String;
-        final amount = (doc['amount'] as num).toDouble();
-
-        map.putIfAbsent(key, () => {'income': 0, 'expense': 0});
-        map[key]![type] = (map[key]![type] ?? 0) + amount;
-      }
-
-      final List<DailyFinanceSummary> list = [];
-      for (int i = 0; i < days; i++) {
-        final d = start.add(Duration(days: i));
-        final data = map[DateTime(d.year, d.month, d.day)] ??
-            {'income': 0, 'expense': 0};
-        final income = data['income'] ?? 0;
-        final expense = data['expense'] ?? 0;
-        list.add(DailyFinanceSummary(
-          date: d,
-          incomeToday: income,
-          expenseToday: expense,
-          totalBalance: income - expense, // bisa kamu ganti logikanya
-        ));
-      }
-      return list;
+        .where('userId', whereIn: allIds) // Filter transaksi milik grup
+    // .orderBy('date', descending: true) // Matikan dulu jika belum ada Index
+        .snapshots()
+        .map((snapshot) {
+      // Sortir manual di sisi aplikasi (karena orderBy dimatikan sementara)
+      final docs = snapshot.docs.map((doc) => TransactionModel.fromFirestore(doc)).toList();
+      docs.sort((a, b) => b.date.compareTo(a.date)); // Terbaru di atas
+      return docs;
     });
   }
 }

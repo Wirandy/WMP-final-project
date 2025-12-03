@@ -32,7 +32,8 @@ class DashboardScreen extends StatelessWidget {
           }
 
           return StreamBuilder<List<TransactionModel>>(
-            stream: firestoreService.getTransactionsStream(user.uid, user.partnerId), // TAMBAHKAN INI!
+            // PERBAIKAN: Menggunakan 'user.collaborators' (List), bukan partnerId
+            stream: firestoreService.getTransactionsStream(user.uid, user.collaborators),
             builder: (context, txSnapshot) {
               if (txSnapshot.connectionState == ConnectionState.waiting) {
                 return const Center(child: CircularProgressIndicator());
@@ -42,6 +43,7 @@ class DashboardScreen extends StatelessWidget {
 
               return Stack(
                 children: [
+                  // BACKGROUND GRADIENT
                   Container(
                     height: 280,
                     decoration: const BoxDecoration(
@@ -56,6 +58,8 @@ class DashboardScreen extends StatelessWidget {
                       ),
                     ),
                   ),
+
+                  // CONTENT
                   SafeArea(
                     child: SingleChildScrollView(
                       child: Column(
@@ -63,8 +67,7 @@ class DashboardScreen extends StatelessWidget {
                         children: [
                           // ===== HEADER =====
                           Padding(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 24.0, vertical: 16.0),
+                            padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
@@ -81,7 +84,7 @@ class DashboardScreen extends StatelessWidget {
                                     ),
                                     const SizedBox(height: 4),
                                     Text(
-                                      'Welcome, ${user.displayName ?? user.email}! 👋',
+                                      'Welcome, ${user.displayName ?? "User"}! 👋',
                                       style: TextStyle(
                                         color: Colors.white.withOpacity(0.9),
                                         fontSize: 16,
@@ -89,15 +92,19 @@ class DashboardScreen extends StatelessWidget {
                                     ),
                                   ],
                                 ),
-                                Container(
-                                  padding: const EdgeInsets.all(8),
-                                  decoration: BoxDecoration(
-                                    color: Colors.white.withOpacity(0.2),
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: const Icon(
-                                    Icons.person_outline,
-                                    color: Colors.white,
+                                // Logout Button
+                                GestureDetector(
+                                  onTap: () => context.read<AuthService>().signOut(),
+                                  child: Container(
+                                    padding: const EdgeInsets.all(8),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white.withOpacity(0.2),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(
+                                      Icons.logout,
+                                      color: Colors.white,
+                                    ),
                                   ),
                                 ),
                               ],
@@ -106,10 +113,9 @@ class DashboardScreen extends StatelessWidget {
 
                           const SizedBox(height: 20),
 
-                          // ===== FAMILY BALANCE CARD =====
+                          // ===== GROUP BALANCE CARD =====
                           Padding(
-                            padding:
-                            const EdgeInsets.symmetric(horizontal: 20.0),
+                            padding: const EdgeInsets.symmetric(horizontal: 20.0),
                             child: Container(
                               padding: const EdgeInsets.all(24),
                               decoration: BoxDecoration(
@@ -127,133 +133,120 @@ class DashboardScreen extends StatelessWidget {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                     children: [
-                                      Container(
-                                        padding: const EdgeInsets.all(10),
-                                        decoration: BoxDecoration(
-                                          color: const Color(0xFF7C4DFF)
-                                              .withOpacity(0.1),
-                                          shape: BoxShape.circle,
-                                        ),
-                                        child: const Icon(
-                                          Icons.group,
-                                          color: Color(0xFF7C4DFF),
-                                        ),
-                                      ),
-                                      const SizedBox(width: 12),
-                                      Column(
-                                        crossAxisAlignment:
-                                        CrossAxisAlignment.start,
+                                      // Icon Group & Label
+                                      Row(
                                         children: [
-                                          const Text(
-                                            'Family Balance',
-                                            style: TextStyle(
-                                              color: Colors.grey,
-                                              fontSize: 14,
+                                          Container(
+                                            padding: const EdgeInsets.all(10),
+                                            decoration: BoxDecoration(
+                                              color: const Color(0xFF7C4DFF).withOpacity(0.1),
+                                              shape: BoxShape.circle,
                                             ),
+                                            child: const Icon(Icons.group, color: Color(0xFF7C4DFF)),
                                           ),
-                                          Row(
-                                            children: [
-                                              Container(
-                                                width: 8,
-                                                height: 8,
-                                                decoration: const BoxDecoration(
-                                                  color: Colors.green,
-                                                  shape: BoxShape.circle,
-                                                ),
-                                              ),
-                                              const SizedBox(width: 4),
-                                              const Text(
-                                                'Shared Wallet',
-                                                style: TextStyle(
-                                                  color: Colors.green,
-                                                  fontSize: 12,
-                                                  fontWeight: FontWeight.w500,
-                                                ),
-                                              ),
-                                            ],
-                                          )
+                                          const SizedBox(width: 12),
+                                          const Text(
+                                            'Total Group Balance',
+                                            style: TextStyle(color: Colors.grey, fontSize: 14),
+                                          ),
                                         ],
                                       ),
+                                      // Tombol Kolaborasi
+                                      IconButton(
+                                        icon: const Icon(Icons.person_add_alt_1, color: Colors.blue),
+                                        onPressed: () {
+                                          Navigator.push(
+                                            context,
+                                            MaterialPageRoute(builder: (context) => const CollaborationScreen()),
+                                          );
+                                        },
+                                      )
                                     ],
                                   ),
                                   const SizedBox(height: 24),
 
-                                  if (user.partnerId != null)
-                                    FutureBuilder<UserModel?>(
-                                      future: firestoreService
-                                          .getUser(user.partnerId!),
-                                      builder: (context, partnerSnapshot) {
-                                        final partnerBalance =
-                                            partnerSnapshot.data?.balance ??
-                                                0.0;
-                                        final totalBalance =
-                                            user.balance + partnerBalance;
+                                  // LOGIKA BARU: Hitung Saldo Grup (Saya + Semua Teman)
+                                  FutureBuilder<List<UserModel>>(
+                                    // PERBAIKAN: Menggunakan collaborators dari UserModel baru
+                                    future: firestoreService.getUsersByIds(user.collaborators),
+                                    builder: (context, collaboratorsSnapshot) {
+                                      // Jika loading, tampilkan saldo sementara (hanya saldo sendiri)
+                                      if (collaboratorsSnapshot.connectionState == ConnectionState.waiting) {
+                                        return _buildBalanceText(user.balance);
+                                      }
 
-                                        return Column(
-                                          crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              NumberFormat.currency(
-                                                locale: 'id_ID',
-                                                symbol: 'Rp ',
-                                                decimalDigits: 0,
-                                              ).format(totalBalance),
-                                              style: const TextStyle(
-                                                color: Color(0xFF00C853),
-                                                fontSize: 32,
-                                                fontWeight: FontWeight.bold,
+                                      final collaboratorsList = collaboratorsSnapshot.data ?? [];
+
+                                      // Hitung total saldo (Saya + Teman-teman)
+                                      double totalGroupBalance = user.balance;
+                                      for (var friend in collaboratorsList) {
+                                        totalGroupBalance += friend.balance;
+                                      }
+
+                                      return Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          // Row: Total Saldo & Tombol Isi Saldo
+                                          Row(
+                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                            children: [
+                                              // Text Total Saldo
+                                              Text(
+                                                NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0).format(totalGroupBalance),
+                                                style: const TextStyle(
+                                                  color: Color(0xFF00C853),
+                                                  fontSize: 28, // Sedikit dikecilkan agar muat
+                                                  fontWeight: FontWeight.bold,
+                                                ),
                                               ),
-                                            ),
-                                            const SizedBox(height: 24),
-                                            const Divider(height: 1),
-                                            const SizedBox(height: 16),
-                                            Row(
-                                              mainAxisAlignment:
-                                              MainAxisAlignment
-                                                  .spaceBetween,
-                                              children: [
-                                                _buildSubBalance(
-                                                  'My Balance',
-                                                  user.balance,
+                                              // Tombol Isi Saldo
+                                              ElevatedButton.icon(
+                                                onPressed: () {
+                                                  Navigator.push(
+                                                    context,
+                                                    MaterialPageRoute(
+                                                      builder: (_) => const AddTransactionScreen(initialType: 'income'),
+                                                    ),
+                                                  );
+                                                },
+                                                icon: const Icon(Icons.add, size: 14),
+                                                label: const Text("Isi Saldo", style: TextStyle(fontSize: 12)),
+                                                style: ElevatedButton.styleFrom(
+                                                  backgroundColor: Colors.green.shade50,
+                                                  foregroundColor: Colors.green,
+                                                  elevation: 0,
+                                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                                  minimumSize: const Size(0, 30),
                                                 ),
-                                                _buildSubBalance(
-                                                  'Partner Balance',
-                                                  partnerBalance,
-                                                ),
-                                              ],
-                                            ),
-                                          ],
-                                        );
-                                      },
-                                    )
-                                  else
-                                    Column(
-                                      crossAxisAlignment:
-                                      CrossAxisAlignment.start,
-                                      children: [
-                                        Text(
-                                          NumberFormat.currency(
-                                            locale: 'id_ID',
-                                            symbol: 'Rp ',
-                                            decimalDigits: 0,
-                                          ).format(user.balance),
-                                          style: const TextStyle(
-                                            color: Color(0xFF00C853),
-                                            fontSize: 32,
-                                            fontWeight: FontWeight.bold,
+                                              ),
+                                            ],
                                           ),
-                                        ),
-                                        const SizedBox(height: 24),
-                                        const Divider(height: 1),
-                                        const SizedBox(height: 16),
-                                        _buildSubBalance(
-                                          'My Balance',
-                                          user.balance,
-                                        ),
-                                      ],
-                                    ),
+                                          const SizedBox(height: 24),
+                                          const Divider(height: 1),
+                                          const SizedBox(height: 16),
+
+                                          // Rincian Saldo Saya
+                                          _buildSubBalance('My Balance', user.balance),
+                                          const SizedBox(height: 8),
+
+                                          // List Saldo Teman
+                                          if (collaboratorsList.isNotEmpty)
+                                            ...collaboratorsList.map((friend) => Padding(
+                                              padding: const EdgeInsets.only(bottom: 4.0),
+                                              child: _buildSubBalance(
+                                                  '${friend.displayName ?? "Partner"}',
+                                                  friend.balance
+                                              ),
+                                            )),
+
+                                          if (user.collaborators.isEmpty)
+                                            const Text("Belum ada anggota grup", style: TextStyle(color: Colors.grey, fontSize: 12)),
+                                        ],
+                                      );
+                                    },
+                                  ),
                                 ],
                               ),
                             ),
@@ -261,7 +254,7 @@ class DashboardScreen extends StatelessWidget {
 
                           const SizedBox(height: 20),
 
-                          // ===== DAILY SUMMARY CHART =====
+                          // ===== DAILY CHART =====
                           _buildDailyChart(transactions),
 
                           const SizedBox(height: 20),
@@ -269,7 +262,7 @@ class DashboardScreen extends StatelessWidget {
                           // ===== RECENT TRANSACTIONS =====
                           _buildRecentTransactions(transactions),
 
-                          const SizedBox(height: 24),
+                          const SizedBox(height: 80),
                         ],
                       ),
                     ),
@@ -284,39 +277,36 @@ class DashboardScreen extends StatelessWidget {
         onPressed: () {
           Navigator.push(
             context,
-            MaterialPageRoute(
-              builder: (_) => const AddTransactionScreen(),
-            ),
+            MaterialPageRoute(builder: (_) => const AddTransactionScreen()),
           );
         },
         backgroundColor: const Color(0xFF2962FF),
-        child: const Icon(Icons.add),
+        child: const Icon(Icons.add, color: Colors.white),
       ),
     );
   }
 
-  // ---------- SMALL WIDGETS ----------
+  // ---------- WIDGET HELPER ----------
+
+  Widget _buildBalanceText(double amount) {
+    return Text(
+      NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0).format(amount),
+      style: const TextStyle(
+        color: Color(0xFF00C853),
+        fontSize: 32,
+        fontWeight: FontWeight.bold,
+      ),
+    );
+  }
 
   Widget _buildSubBalance(String title, double amount) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
+        Text(title, style: const TextStyle(color: Colors.grey, fontSize: 13)),
         Text(
-          title,
-          style: const TextStyle(color: Colors.grey, fontSize: 13),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          NumberFormat.currency(
-            locale: 'id_ID',
-            symbol: 'Rp ',
-            decimalDigits: 0,
-          ).format(amount),
-          style: const TextStyle(
-            color: Colors.black87,
-            fontSize: 16,
-            fontWeight: FontWeight.w600,
-          ),
+          NumberFormat.compactCurrency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0).format(amount),
+          style: const TextStyle(color: Colors.black87, fontSize: 14, fontWeight: FontWeight.w600),
         ),
       ],
     );
@@ -325,10 +315,6 @@ class DashboardScreen extends StatelessWidget {
   // ---------- DAILY CHART ----------
 
   Widget _buildDailyChart(List<TransactionModel> transactions) {
-    // SESUAIKAN FIELD:
-    // tx.date -> DateTime
-    // tx.type -> 'income' / 'expense' (atau apapun di modelmu)
-    // tx.amount -> double
     final Map<String, double> dailyTotals = {};
 
     for (final tx in transactions) {
@@ -338,22 +324,9 @@ class DashboardScreen extends StatelessWidget {
       dailyTotals[dateKey] = (dailyTotals[dateKey] ?? 0) + amount;
     }
 
-    final sortedKeys = dailyTotals.keys.toList()
-      ..sort((a, b) => a.compareTo(b));
+    final sortedKeys = dailyTotals.keys.toList()..sort((a, b) => a.compareTo(b));
 
-    if (sortedKeys.isEmpty) {
-      return Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 20.0),
-        child: Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(16),
-          ),
-          child: const Text('Belum ada data transaksi'),
-        ),
-      );
-    }
+    if (sortedKeys.isEmpty) return const SizedBox();
 
     final maxAbs = dailyTotals.values
         .map((v) => v.abs())
@@ -366,67 +339,50 @@ class DashboardScreen extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.03),
-              blurRadius: 12,
-              offset: const Offset(0, 6),
-            ),
-          ],
+          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 12, offset: const Offset(0, 6))],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
-              'Daily Summary',
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            ),
+            const Text('Ringkasan Harian', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
             const SizedBox(height: 12),
             Column(
               children: sortedKeys.map((key) {
                 final value = dailyTotals[key]!;
                 final ratio = maxAbs == 0 ? 0.0 : (value.abs() / maxAbs);
-                final barWidth = 200 * ratio;
+                final barWidth = 150 * ratio;
 
                 return Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 4.0),
+                  padding: const EdgeInsets.symmetric(vertical: 6.0),
                   child: Row(
                     children: [
                       SizedBox(
-                        width: 70,
-                        child: Text(
-                          DateFormat('dd/MM').format(DateTime.parse(key)),
-                          style: const TextStyle(
-                            fontSize: 12,
-                            color: Colors.grey,
-                          ),
-                        ),
+                        width: 50,
+                        child: Text(DateFormat('dd/MM').format(DateTime.parse(key)), style: const TextStyle(fontSize: 12, color: Colors.grey)),
                       ),
                       Expanded(
-                        child: Align(
-                          alignment: value >= 0
-                              ? Alignment.centerLeft
-                              : Alignment.centerRight,
-                          child: Container(
-                            width: barWidth,
-                            height: 10,
-                            decoration: BoxDecoration(
-                              color: value >= 0 ? Colors.green : Colors.red,
-                              borderRadius: BorderRadius.circular(8),
+                        child: Row(
+                          children: [
+                            if (value >= 0) const Spacer(),
+                            Container(
+                              width: barWidth,
+                              height: 8,
+                              decoration: BoxDecoration(
+                                color: value >= 0 ? Colors.green : Colors.red,
+                                borderRadius: BorderRadius.circular(8),
+                              ),
                             ),
-                          ),
+                            if (value < 0) const Spacer(),
+                          ],
                         ),
                       ),
                       const SizedBox(width: 8),
-                      Text(
-                        NumberFormat.compactCurrency(
-                          locale: 'id_ID',
-                          symbol: 'Rp ',
-                          decimalDigits: 0,
-                        ).format(value),
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: value >= 0 ? Colors.green : Colors.red,
+                      SizedBox(
+                        width: 70,
+                        child: Text(
+                          NumberFormat.compact(locale: 'id_ID').format(value),
+                          textAlign: TextAlign.end,
+                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: value >= 0 ? Colors.green : Colors.red),
                         ),
                       ),
                     ],
@@ -443,12 +399,17 @@ class DashboardScreen extends StatelessWidget {
   // ---------- RECENT TRANSACTIONS ----------
 
   Widget _buildRecentTransactions(List<TransactionModel> transactions) {
-    final sorted = [...transactions]
-      ..sort((a, b) => b.date.compareTo(a.date));
+    if (transactions.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.all(20.0),
+        child: Center(child: Text("Belum ada transaksi")),
+      );
+    }
 
+    final sorted = [...transactions]..sort((a, b) => b.date.compareTo(a.date));
     final Map<String, List<TransactionModel>> grouped = {};
     for (final tx in sorted) {
-      final dateKey = DateFormat('EEEE, dd MMM').format(tx.date);
+      final dateKey = DateFormat('EEEE, d MMM yyyy', 'id_ID').format(tx.date);
       grouped.putIfAbsent(dateKey, () => []).add(tx);
     }
 
@@ -457,26 +418,18 @@ class DashboardScreen extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Recent Transactions',
-            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-          ),
+          const Text('Transaksi Terakhir', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
           const SizedBox(height: 12),
           ...grouped.entries.map((entry) {
             return Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  entry.key,
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: Colors.grey,
-                  ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8.0),
+                  child: Text(entry.key, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.grey)),
                 ),
-                const SizedBox(height: 6),
                 ...entry.value.map((tx) => _buildTransactionTile(tx)),
-                const SizedBox(height: 12),
+                const SizedBox(height: 8),
               ],
             );
           }),
@@ -486,65 +439,38 @@ class DashboardScreen extends StatelessWidget {
   }
 
   Widget _buildTransactionTile(TransactionModel tx) {
-    // SESUAIKAN:
-    // tx.type: 'income' / 'expense'
-    // tx.category: String
-    // tx.amount: double
     final bool isExpense = tx.type.toLowerCase() == 'expense';
     final color = isExpense ? Colors.red : Colors.green;
 
     return Container(
-      margin: const EdgeInsets.symmetric(vertical: 4),
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.02),
-            blurRadius: 6,
-            offset: const Offset(0, 3),
-          ),
-        ],
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.05), spreadRadius: 1, blurRadius: 10, offset: const Offset(0, 4))],
       ),
       child: Row(
         children: [
           Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.08),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(
-              _getCategoryIcon(tx.category),
-              color: color,
-              size: 22,
-            ),
+            width: 48, height: 48,
+            decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
+            child: Icon(_getCategoryIcon(tx.category), color: color, size: 24),
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 16),
           Expanded(
-            child: Text(
-              tx.category,
-              style: const TextStyle(
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-              ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(tx.category, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                if (tx.description.isNotEmpty)
+                  Text(tx.description, style: const TextStyle(color: Colors.grey, fontSize: 12), maxLines: 1, overflow: TextOverflow.ellipsis),
+              ],
             ),
           ),
-          const SizedBox(width: 8),
           Text(
-            (isExpense ? '- ' : '+ ') +
-                NumberFormat.currency(
-                  locale: 'id_ID',
-                  symbol: 'Rp ',
-                  decimalDigits: 0,
-                ).format(tx.amount),
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: FontWeight.bold,
-              color: color,
-            ),
+            (isExpense ? '- ' : '+ ') + NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0).format(tx.amount),
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: color),
           ),
         ],
       ),
@@ -553,23 +479,13 @@ class DashboardScreen extends StatelessWidget {
 
   IconData _getCategoryIcon(String category) {
     switch (category.toLowerCase()) {
-      case 'makanan':
-      case 'food':
-        return Icons.fastfood;
-      case 'transport':
-      case 'transportasi':
-        return Icons.directions_bus;
-      case 'belanja':
-      case 'shopping':
-        return Icons.shopping_bag;
-      case 'tagihan':
-      case 'bills':
-        return Icons.receipt_long;
-      case 'gaji':
-      case 'income':
-        return Icons.payments;
-      default:
-        return Icons.category;
+      case 'makan': case 'makanan': case 'food': return Icons.restaurant;
+      case 'transport': case 'transportasi': return Icons.directions_bus;
+      case 'belanja': case 'shopping': return Icons.shopping_bag;
+      case 'tagihan': case 'bills': return Icons.receipt_long;
+      case 'gaji': case 'income': return Icons.attach_money;
+      case 'kesehatan': return Icons.medical_services;
+      default: return Icons.category;
     }
   }
 }

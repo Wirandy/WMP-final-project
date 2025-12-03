@@ -7,7 +7,9 @@ class FirestoreService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  // Get current user stream
+  // ================= USER METHODS =================
+
+  // Mendapatkan data user saat ini secara Realtime
   Stream<UserModel?> getUserStream() {
     final user = _auth.currentUser;
     if (user == null) return Stream.value(null);
@@ -20,7 +22,32 @@ class FirestoreService {
     });
   }
 
-  // Search user by email
+  // Mendapatkan data satu user berdasarkan ID (Sekali panggil)
+  Future<UserModel?> getUser(String uid) async {
+    final doc = await _db.collection('users').doc(uid).get();
+    if (doc.exists) {
+      return UserModel.fromFirestore(doc);
+    }
+    return null;
+  }
+
+  // [BARU] Mendapatkan data BANYAK user sekaligus (Untuk fitur Grup/Family Balance)
+  Future<List<UserModel>> getUsersByIds(List<String> ids) async {
+    if (ids.isEmpty) return [];
+
+    // Firestore membatasi 'whereIn' maksimal 10 ID.
+    // Kita ambil 10 pertama saja untuk keamanan.
+    List<String> chunk = ids.length > 10 ? ids.sublist(0, 10) : ids;
+
+    final snapshot = await _db
+        .collection('users')
+        .where(FieldPath.documentId, whereIn: chunk)
+        .get();
+
+    return snapshot.docs.map((doc) => UserModel.fromFirestore(doc)).toList();
+  }
+
+  // Mencari user lain berdasarkan Email (Untuk Add Partner)
   Future<UserModel?> searchUserByEmail(String email) async {
     final snapshot = await _db
         .collection('users')
@@ -34,92 +61,77 @@ class FirestoreService {
     return null;
   }
 
-  // Send collaboration request
-  Future<void> sendCollaborationRequest(String targetUid) async {
-    final currentUser = _auth.currentUser;
-    if (currentUser == null) return;
+  // ================= COLLABORATION METHODS =================
 
-    // Update target user's pendingRequestFrom field
-    await _db.collection('users').doc(targetUid).update({
-      'pendingRequestFrom': currentUser.uid,
-    });
-  }
+  // [BARU] Menambah teman kolaborasi
+  Future<void> addCollaborator(String currentUid, String newPartnerEmail) async {
+    // 1. Cari user berdasarkan email
+    final targetUser = await searchUserByEmail(newPartnerEmail);
 
-  // Accept collaboration request
-  Future<void> acceptCollaborationRequest(String requesterUid) async {
-    final currentUser = _auth.currentUser;
-    if (currentUser == null) return;
-
-    final batch = _db.batch();
-
-    // Update current user
-    final currentUserRef = _db.collection('users').doc(currentUser.uid);
-    batch.update(currentUserRef, {
-      'partnerId': requesterUid,
-      'pendingRequestFrom': FieldValue.delete(),
-    });
-
-    // Update requester user
-    final requesterRef = _db.collection('users').doc(requesterUid);
-    batch.update(requesterRef, {
-      'partnerId': currentUser.uid,
-    });
-
-    await batch.commit();
-  }
-
-  // Reject request
-  Future<void> rejectCollaborationRequest() async {
-    final currentUser = _auth.currentUser;
-    if (currentUser == null) return;
-
-    await _db.collection('users').doc(currentUser.uid).update({
-      'pendingRequestFrom': FieldValue.delete(),
-    });
-  }
-
-  // Get user by ID
-  Future<UserModel?> getUser(String uid) async {
-    final doc = await _db.collection('users').doc(uid).get();
-    if (doc.exists) {
-      return UserModel.fromFirestore(doc);
+    if (targetUser == null) {
+      throw Exception('Email tidak ditemukan');
     }
-    return null;
+    if (targetUser.uid == currentUid) {
+      throw Exception('Tidak bisa menambahkan diri sendiri');
+    }
+
+    // 2. Update user kita: Tambahkan ID teman ke list 'collaborators'
+    await _db.collection('users').doc(currentUid).update({
+      'collaborators': FieldValue.arrayUnion([targetUser.uid])
+    });
+
+    // 3. Update user teman: Tambahkan ID kita ke list mereka
+    await _db.collection('users').doc(targetUser.uid).update({
+      'collaborators': FieldValue.arrayUnion([currentUid])
+    });
   }
 
-  // Add Transaction
+  // ================= TRANSACTION METHODS =================
+
+  // Menambah Transaksi & Update Saldo Otomatis
   Future<void> addTransaction(TransactionModel transaction) async {
     final batch = _db.batch();
-    final transactionRef = _db.collection('transactions').doc(); // Auto-ID
+    final transactionRef = _db.collection('transactions').doc(); // Auto-Generate ID
 
-    // Set transaction data
+    // 1. Simpan data transaksi
     batch.set(transactionRef, transaction.toMap());
 
-    // Update user balance
+    // 2. Update saldo user (Balance)
     final userRef = _db.collection('users').doc(transaction.userId);
+
     if (transaction.type == 'expense') {
+      // Kalau pengeluaran, saldo berkurang
       batch.update(userRef, {'balance': FieldValue.increment(-transaction.amount)});
     } else {
+      // Kalau pemasukan, saldo bertambah
       batch.update(userRef, {'balance': FieldValue.increment(transaction.amount)});
     }
 
+    // Jalankan kedua perintah di atas secara bersamaan
     await batch.commit();
   }
 
-  // Get Transactions Stream
-  Stream<List<TransactionModel>> getTransactionsStream(String myUid, String? partnerUid) {
-    List<String> userIds = [myUid];
-    if (partnerUid != null) {
-      userIds.add(partnerUid);
+  // [BARU] Mengambil List Transaksi (Gabungan Saya + Teman Kolaborasi)
+  // Parameter ke-2 sekarang adalah List<String>, BUKAN String?
+  Stream<List<TransactionModel>> getTransactionsStream(String myUid, List<String> collaboratorIds) {
+    // Gabungkan ID saya dengan ID teman-teman
+    List<String> allIds = [myUid, ...collaboratorIds];
+
+    // Batasan Firestore: 'whereIn' maksimal 10 item
+    if (allIds.length > 10) {
+      allIds = allIds.sublist(0, 10);
     }
 
     return _db
         .collection('transactions')
-        .where('userId', whereIn: userIds)
-        .orderBy('date', descending: true)
+        .where('userId', whereIn: allIds) // Filter transaksi milik grup
+    // .orderBy('date', descending: true) // Matikan dulu jika belum ada Index
         .snapshots()
         .map((snapshot) {
-      return snapshot.docs.map((doc) => TransactionModel.fromFirestore(doc)).toList();
+      // Sortir manual di sisi aplikasi (karena orderBy dimatikan sementara)
+      final docs = snapshot.docs.map((doc) => TransactionModel.fromFirestore(doc)).toList();
+      docs.sort((a, b) => b.date.compareTo(a.date)); // Terbaru di atas
+      return docs;
     });
   }
 }
