@@ -9,14 +9,13 @@ import 'services/firestore_service.dart';
 import 'services/theme_provider.dart';
 import 'screens/login_screen.dart';
 import 'screens/main_screen.dart';
+import 'screens/pin_wrapper.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
   // Inisialisasi Firebase
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
   // TAMBAHKAN BARIS INI (Inisialisasi Format Indonesia)
   await initializeDateFormatting('id_ID', null);
@@ -44,13 +43,11 @@ class MyApp extends StatelessWidget {
           return MaterialApp(
             title: 'Money Manager',
             theme: ThemeData(
-              colorScheme:
-              ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+              colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
               useMaterial3: true,
             ),
             darkTheme: ThemeData.dark(useMaterial3: true),
-            themeMode:
-            themeProvider.isDark ? ThemeMode.dark : ThemeMode.light,
+            themeMode: themeProvider.isDark ? ThemeMode.dark : ThemeMode.light,
             home: const AuthWrapper(),
           );
         },
@@ -67,7 +64,7 @@ class AuthWrapper extends StatelessWidget {
     final firebaseUser = context.watch<User?>();
 
     if (firebaseUser != null) {
-      return const MainScreen();
+      return const PinWrapper();
     }
     return const LoginScreen();
   }

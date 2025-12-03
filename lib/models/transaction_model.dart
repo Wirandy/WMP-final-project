@@ -8,11 +8,13 @@ class TransactionModel {
   final String category;
   final DateTime date;
   final String description;
+  final String userName;
   final bool isShared;
 
   TransactionModel({
     required this.id,
     required this.userId,
+    required this.userName,
     required this.amount,
     required this.type,
     required this.category,
@@ -27,6 +29,7 @@ class TransactionModel {
     return TransactionModel(
       id: doc.id,
       userId: data['userId'] ?? '',
+      userName: data['userName'] ?? 'Unknown',
       amount: (data['amount'] ?? 0).toDouble(),
       type: data['type'] ?? 'expense',
       category: data['category'] ?? 'General',
@@ -41,6 +44,7 @@ class TransactionModel {
   Map<String, dynamic> toMap() {
     return {
       'userId': userId,
+      'userName': userName,
       'amount': amount,
       'type': type,
       'category': category,

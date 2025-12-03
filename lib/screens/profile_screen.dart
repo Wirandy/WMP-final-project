@@ -5,6 +5,7 @@ import '../services/firestore_service.dart';
 import '../services/theme_provider.dart';
 import '../models/user_model.dart';
 import 'collaboration_screen.dart';
+import 'pin_screen.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -179,9 +180,7 @@ class ProfileScreen extends StatelessWidget {
                             children: [
                               const Text(
                                 'Account details',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w600,
-                                ),
+                                style: TextStyle(fontWeight: FontWeight.w600),
                               ),
                               Text(
                                 'Transactions',
@@ -195,9 +194,7 @@ class ProfileScreen extends StatelessWidget {
                           const SizedBox(height: 12),
                           Text(
                             user.displayName ?? '',
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w500,
-                            ),
+                            style: const TextStyle(fontWeight: FontWeight.w500),
                           ),
                           const SizedBox(height: 4),
                           Text(
@@ -267,45 +264,23 @@ class ProfileScreen extends StatelessWidget {
                       subtitle: 'Change your password here.',
                       onTap: () => _showChangePasswordDialog(context),
                     ),
+
                     _profileMenuItem(
-                      icon: Icons.credit_card,
-                      color: const Color(0xFFF59E0B),
-                      title: 'Saved cards',
-                      subtitle: 'See your saved cards here.',
-                      onTap: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Saved cards not implemented yet'),
-                          ),
-                        );
-                      },
-                    ),
-                    _profileMenuItem(
-                      icon: Icons.pin,
+                      icon: Icons.lock_outline,
                       color: const Color(0xFF8B5CF6),
-                      title: 'Transfer PIN',
-                      subtitle: 'Change your transfer PIN.',
+                      title: 'App PIN',
+                      subtitle: 'Change your security PIN.',
                       onTap: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Transfer PIN not implemented yet'),
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                const PinScreen(mode: PinMode.update),
                           ),
                         );
                       },
                     ),
-                    _profileMenuItem(
-                      icon: Icons.person_add_alt_1,
-                      color: const Color(0xFFFB923C),
-                      title: 'Refer & Earn',
-                      subtitle: 'Refer your friend and win money.',
-                      onTap: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Refer & Earn not implemented yet'),
-                          ),
-                        );
-                      },
-                    ),
+
                     const SizedBox(height: 12),
 
                     // Collaboration + Dark mode + Logout seperti sebelumnya
@@ -327,8 +302,7 @@ class ProfileScreen extends StatelessWidget {
                       icon: Icons.dark_mode,
                       color: Colors.purple,
                       title: 'Dark Mode',
-                      subtitle:
-                      themeProvider.isDark ? 'On' : 'Off',
+                      subtitle: themeProvider.isDark ? 'On' : 'Off',
                       onTap: () {
                         final newVal = !themeProvider.isDark;
                         context.read<ThemeProvider>().toggle(newVal);
@@ -366,12 +340,11 @@ class ProfileScreen extends StatelessWidget {
   // ====== DIALOGS & WIDGET HELPER ======
 
   void _showEditProfileDialog(
-      BuildContext context,
-      UserModel user,
-      FirestoreService firestoreService,
-      ) {
-    final nameController =
-    TextEditingController(text: user.displayName ?? '');
+    BuildContext context,
+    UserModel user,
+    FirestoreService firestoreService,
+  ) {
+    final nameController = TextEditingController(text: user.displayName ?? '');
     final emailController = TextEditingController(text: user.email);
 
     showDialog(
@@ -420,9 +393,7 @@ class ProfileScreen extends StatelessWidget {
                 if (context.mounted) {
                   Navigator.pop(context);
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Profile updated (UI only)'),
-                    ),
+                    const SnackBar(content: Text('Profile updated (UI only)')),
                   );
                 }
               },
@@ -488,9 +459,7 @@ class ProfileScreen extends StatelessWidget {
                 final newPw = newPwController.text.trim();
                 final confirmPw = confirmPwController.text.trim();
 
-                if (currentPw.isEmpty ||
-                    newPw.isEmpty ||
-                    confirmPw.isEmpty) {
+                if (currentPw.isEmpty || newPw.isEmpty || confirmPw.isEmpty) {
                   return;
                 }
                 if (newPw != confirmPw) {
@@ -508,8 +477,7 @@ class ProfileScreen extends StatelessWidget {
                   Navigator.pop(context);
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
-                      content:
-                      Text('Change password not implemented yet'),
+                      content: Text('Change password not implemented yet'),
                       backgroundColor: Colors.blueGrey,
                     ),
                   );
@@ -575,10 +543,7 @@ Widget _profileMenuItem({
                 const SizedBox(height: 2),
                 Text(
                   subtitle,
-                  style: const TextStyle(
-                    fontSize: 11,
-                    color: Colors.grey,
-                  ),
+                  style: const TextStyle(fontSize: 11, color: Colors.grey),
                 ),
               ],
             ),

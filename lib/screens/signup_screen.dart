@@ -33,8 +33,14 @@ class _SignUpScreenState extends State<SignUpScreen>
       duration: const Duration(seconds: 3),
     )..repeat(reverse: true);
 
-    _bgGlowAnimation = Tween<double>(begin: 0.0, end: 0.25).animate(_animController);
-    _cardGlowAnimation = Tween<double>(begin: 0.0, end: 10.0).animate(_animController);
+    _bgGlowAnimation = Tween<double>(
+      begin: 0.0,
+      end: 0.25,
+    ).animate(_animController);
+    _cardGlowAnimation = Tween<double>(
+      begin: 0.0,
+      end: 10.0,
+    ).animate(_animController);
   }
 
   @override
@@ -49,7 +55,8 @@ class _SignUpScreenState extends State<SignUpScreen>
 
   Future<void> _signUp() async {
     if (_formKey.currentState!.validate()) {
-      if (_passwordController.text.trim() != _confirmPasswordController.text.trim()) {
+      if (_passwordController.text.trim() !=
+          _confirmPasswordController.text.trim()) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Passwords do not match'),
@@ -121,10 +128,7 @@ class _SignUpScreenState extends State<SignUpScreen>
                 child: Container(
                   decoration: BoxDecoration(
                     gradient: RadialGradient(
-                      colors: [
-                        goldColor.withOpacity(0.35),
-                        Colors.transparent,
-                      ],
+                      colors: [goldColor.withOpacity(0.35), Colors.transparent],
                       radius: 0.9,
                       center: const Alignment(0.0, -0.5),
                     ),
@@ -133,8 +137,10 @@ class _SignUpScreenState extends State<SignUpScreen>
               ),
               Center(
                 child: SingleChildScrollView(
-                  padding:
-                  const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 32,
+                  ),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -183,7 +189,8 @@ class _SignUpScreenState extends State<SignUpScreen>
                                   prefixIcon: Icon(Icons.person_outline),
                                   border: OutlineInputBorder(),
                                 ),
-                                validator: (value) => (value == null || value.isEmpty)
+                                validator: (value) =>
+                                    (value == null || value.isEmpty)
                                     ? 'Please enter your name'
                                     : null,
                               ),
@@ -196,7 +203,8 @@ class _SignUpScreenState extends State<SignUpScreen>
                                   border: OutlineInputBorder(),
                                 ),
                                 keyboardType: TextInputType.emailAddress,
-                                validator: (value) => (value == null || value.isEmpty)
+                                validator: (value) =>
+                                    (value == null || value.isEmpty)
                                     ? 'Please enter email'
                                     : null,
                               ),
@@ -209,7 +217,8 @@ class _SignUpScreenState extends State<SignUpScreen>
                                   border: OutlineInputBorder(),
                                 ),
                                 obscureText: true,
-                                validator: (value) => (value == null || value.isEmpty)
+                                validator: (value) =>
+                                    (value == null || value.isEmpty)
                                     ? 'Please enter password'
                                     : null,
                               ),
@@ -222,7 +231,8 @@ class _SignUpScreenState extends State<SignUpScreen>
                                   border: OutlineInputBorder(),
                                 ),
                                 obscureText: true,
-                                validator: (value) => (value == null || value.isEmpty)
+                                validator: (value) =>
+                                    (value == null || value.isEmpty)
                                     ? 'Please confirm your password'
                                     : null,
                               ),
@@ -234,7 +244,9 @@ class _SignUpScreenState extends State<SignUpScreen>
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: blueColor,
                                     foregroundColor: Colors.white,
-                                    padding: const EdgeInsets.symmetric(vertical: 14),
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 14,
+                                    ),
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(16),
                                     ),
@@ -242,16 +254,29 @@ class _SignUpScreenState extends State<SignUpScreen>
                                   ),
                                   child: _isLoading
                                       ? const SizedBox(
-                                      height: 24,
-                                      width: 24,
-                                      child: CircularProgressIndicator(
-                                        color: Colors.white,
-                                        strokeWidth: 3,
-                                      ))
+                                          height: 24,
+                                          width: 24,
+                                          child: CircularProgressIndicator(
+                                            color: Colors.white,
+                                            strokeWidth: 3,
+                                          ),
+                                        )
                                       : const Text(
-                                    'Sign Up',
-                                    style: TextStyle(fontWeight: FontWeight.bold),
-                                  ),
+                                          'Sign Up',
+                                          style: TextStyle(
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              TextButton(
+                                onPressed: () {
+                                  Navigator.pop(context);
+                                },
+                                child: const Text(
+                                  "Already have an account? Login",
+                                  style: TextStyle(color: Colors.grey),
                                 ),
                               ),
                             ],

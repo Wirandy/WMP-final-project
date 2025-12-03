@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../models/user_model.dart';
 import '../models/transaction_model.dart';
+import '../models/request_model.dart';
 
 class FirestoreService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
@@ -64,7 +65,10 @@ class FirestoreService {
   // ================= COLLABORATION METHODS =================
 
   // [BARU] Menambah teman kolaborasi
-  Future<void> addCollaborator(String currentUid, String newPartnerEmail) async {
+  Future<void> addCollaborator(
+    String currentUid,
+    String newPartnerEmail,
+  ) async {
     // 1. Cari user berdasarkan email
     final targetUser = await searchUserByEmail(newPartnerEmail);
 
@@ -77,13 +81,18 @@ class FirestoreService {
 
     // 2. Update user kita: Tambahkan ID teman ke list 'collaborators'
     await _db.collection('users').doc(currentUid).update({
-      'collaborators': FieldValue.arrayUnion([targetUser.uid])
+      'collaborators': FieldValue.arrayUnion([targetUser.uid]),
     });
 
     // 3. Update user teman: Tambahkan ID kita ke list mereka
     await _db.collection('users').doc(targetUser.uid).update({
-      'collaborators': FieldValue.arrayUnion([currentUid])
+      'collaborators': FieldValue.arrayUnion([currentUid]),
     });
+  }
+
+  // [BARU] Set PIN Keamanan
+  Future<void> setPin(String uid, String pin) async {
+    await _db.collection('users').doc(uid).update({'pin': pin});
   }
 
   // ================= TRANSACTION METHODS =================
@@ -91,7 +100,9 @@ class FirestoreService {
   // Menambah Transaksi & Update Saldo Otomatis
   Future<void> addTransaction(TransactionModel transaction) async {
     final batch = _db.batch();
-    final transactionRef = _db.collection('transactions').doc(); // Auto-Generate ID
+    final transactionRef = _db
+        .collection('transactions')
+        .doc(); // Auto-Generate ID
 
     // 1. Simpan data transaksi
     batch.set(transactionRef, transaction.toMap());
@@ -101,10 +112,14 @@ class FirestoreService {
 
     if (transaction.type == 'expense') {
       // Kalau pengeluaran, saldo berkurang
-      batch.update(userRef, {'balance': FieldValue.increment(-transaction.amount)});
+      batch.update(userRef, {
+        'balance': FieldValue.increment(-transaction.amount),
+      });
     } else {
       // Kalau pemasukan, saldo bertambah
-      batch.update(userRef, {'balance': FieldValue.increment(transaction.amount)});
+      batch.update(userRef, {
+        'balance': FieldValue.increment(transaction.amount),
+      });
     }
 
     // Jalankan kedua perintah di atas secara bersamaan
@@ -113,7 +128,10 @@ class FirestoreService {
 
   // [BARU] Mengambil List Transaksi (Gabungan Saya + Teman Kolaborasi)
   // Parameter ke-2 sekarang adalah List<String>, BUKAN String?
-  Stream<List<TransactionModel>> getTransactionsStream(String myUid, List<String> collaboratorIds) {
+  Stream<List<TransactionModel>> getTransactionsStream(
+    String myUid,
+    List<String> collaboratorIds,
+  ) {
     // Gabungkan ID saya dengan ID teman-teman
     List<String> allIds = [myUid, ...collaboratorIds];
 
@@ -125,13 +143,95 @@ class FirestoreService {
     return _db
         .collection('transactions')
         .where('userId', whereIn: allIds) // Filter transaksi milik grup
-    // .orderBy('date', descending: true) // Matikan dulu jika belum ada Index
+        // .orderBy('date', descending: true) // Matikan dulu jika belum ada Index
         .snapshots()
         .map((snapshot) {
-      // Sortir manual di sisi aplikasi (karena orderBy dimatikan sementara)
-      final docs = snapshot.docs.map((doc) => TransactionModel.fromFirestore(doc)).toList();
-      docs.sort((a, b) => b.date.compareTo(a.date)); // Terbaru di atas
-      return docs;
+          // Sortir manual di sisi aplikasi (karena orderBy dimatikan sementara)
+          final docs = snapshot.docs
+              .map((doc) => TransactionModel.fromFirestore(doc))
+              .toList();
+          docs.sort((a, b) => b.date.compareTo(a.date)); // Terbaru di atas
+          return docs;
+        });
+  }
+  // ================= REQUEST METHODS =================
+
+  // Kirim Request
+  Future<void> sendCollaborationRequest(
+    String fromUid,
+    String fromEmail,
+    String toEmail,
+  ) async {
+    // 1. Cari user tujuan
+    final targetUser = await searchUserByEmail(toEmail);
+    if (targetUser == null) throw Exception('Email tidak ditemukan');
+    if (targetUser.uid == fromUid)
+      throw Exception('Tidak bisa menambahkan diri sendiri');
+
+    // 2. Cek apakah sudah ada request pending
+    final existing = await _db
+        .collection('requests')
+        .where('fromUid', isEqualTo: fromUid)
+        .where('toEmail', isEqualTo: toEmail)
+        .where('status', isEqualTo: 'pending')
+        .get();
+
+    if (existing.docs.isNotEmpty)
+      throw Exception('Request sudah dikirim sebelumnya');
+
+    // 3. Buat request baru
+    await _db.collection('requests').add({
+      'fromUid': fromUid,
+      'fromEmail': fromEmail,
+      'toEmail': toEmail,
+      'status': 'pending',
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  // Ambil Request Masuk
+  Stream<List<RequestModel>> getIncomingRequests(String myEmail) {
+    return _db
+        .collection('requests')
+        .where('toEmail', isEqualTo: myEmail)
+        .where('status', isEqualTo: 'pending')
+        .snapshots()
+        .map(
+          (snap) =>
+              snap.docs.map((doc) => RequestModel.fromFirestore(doc)).toList(),
+        );
+  }
+
+  // Terima Request
+  Future<void> acceptRequest(
+    String requestId,
+    String fromUid,
+    String myUid,
+  ) async {
+    final batch = _db.batch();
+
+    // 1. Update status request jadi 'accepted'
+    final reqRef = _db.collection('requests').doc(requestId);
+    batch.update(reqRef, {'status': 'accepted'});
+
+    // 2. Saling add collaborators (Logic lama dipindah kesini)
+    final myRef = _db.collection('users').doc(myUid);
+    final partnerRef = _db.collection('users').doc(fromUid);
+
+    batch.update(myRef, {
+      'collaborators': FieldValue.arrayUnion([fromUid]),
+    });
+    batch.update(partnerRef, {
+      'collaborators': FieldValue.arrayUnion([myUid]),
+    });
+
+    await batch.commit();
+  }
+
+  // Tolak Request
+  Future<void> rejectRequest(String requestId) async {
+    await _db.collection('requests').doc(requestId).update({
+      'status': 'rejected',
     });
   }
 }

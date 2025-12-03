@@ -83,24 +83,28 @@ class _BalanceScreenState extends State<BalanceScreen> {
               allTx = allTx
                   .where(
                     (tx) => tx.date.isAfter(start) && tx.date.isBefore(end),
-              )
+                  )
                   .toList();
 
-              final expenses =
-              allTx.where((tx) => tx.type == 'expense').toList();
-              final incomes =
-              allTx.where((tx) => tx.type == 'income').toList();
+              final expenses = allTx
+                  .where((tx) => tx.type == 'expense')
+                  .toList();
+              final incomes = allTx.where((tx) => tx.type == 'income').toList();
 
-              if (allTx.isEmpty) {
-                return const Center(
-                  child: Text('No transaction data for this period'),
-                );
-              }
+              // if (allTx.isEmpty) {
+              //   return const Center(
+              //     child: Text('No transaction data for this period'),
+              //   );
+              // }
 
-              double totalExpense =
-              expenses.fold(0, (sum, tx) => sum + tx.amount);
-              double totalIncome =
-              incomes.fold(0, (sum, tx) => sum + tx.amount);
+              double totalExpense = expenses.fold(
+                0,
+                (sum, tx) => sum + tx.amount,
+              );
+              double totalIncome = incomes.fold(
+                0,
+                (sum, tx) => sum + tx.amount,
+              );
               double netBalance = totalIncome - totalExpense;
 
               // Total per kategori
@@ -137,8 +141,9 @@ class _BalanceScreenState extends State<BalanceScreen> {
               final sections = <PieChartSectionData>[];
               categoryTotals.forEach((cat, value) {
                 if (value <= 0) return;
-                final percentage =
-                totalExpense == 0 ? 0 : (value / totalExpense) * 100;
+                final percentage = totalExpense == 0
+                    ? 0
+                    : (value / totalExpense) * 100;
                 sections.add(
                   PieChartSectionData(
                     color: categoryColors[cat],
@@ -157,8 +162,9 @@ class _BalanceScreenState extends State<BalanceScreen> {
               // Top 3 expenses
               final topExpenses = [...expenses]
                 ..sort((a, b) => b.amount.compareTo(a.amount));
-              final top3 =
-              topExpenses.length > 3 ? topExpenses.sublist(0, 3) : topExpenses;
+              final top3 = topExpenses.length > 3
+                  ? topExpenses.sublist(0, 3)
+                  : topExpenses;
 
               return SingleChildScrollView(
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
@@ -262,8 +268,10 @@ class _BalanceScreenState extends State<BalanceScreen> {
 
                     const Text(
                       'Expense Breakdown',
-                      style:
-                      TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     const SizedBox(height: 16),
                     if (expenses.isEmpty)
@@ -294,51 +302,52 @@ class _BalanceScreenState extends State<BalanceScreen> {
                                 children: categoryTotals.entries
                                     .where((e) => e.value > 0)
                                     .map((entry) {
-                                  final cat = entry.key;
-                                  final amount = entry.value;
-                                  final percent = totalExpense == 0
-                                      ? 0
-                                      : (amount / totalExpense) * 100;
-                                  return Padding(
-                                    padding: const EdgeInsets.symmetric(
-                                      vertical: 4,
-                                    ),
-                                    child: Row(
-                                      children: [
-                                        Container(
-                                          width: 14,
-                                          height: 14,
-                                          decoration: BoxDecoration(
-                                            color: categoryColors[cat],
-                                            shape: BoxShape.circle,
-                                          ),
+                                      final cat = entry.key;
+                                      final amount = entry.value;
+                                      final percent = totalExpense == 0
+                                          ? 0
+                                          : (amount / totalExpense) * 100;
+                                      return Padding(
+                                        padding: const EdgeInsets.symmetric(
+                                          vertical: 4,
                                         ),
-                                        const SizedBox(width: 8),
-                                        Expanded(
-                                          child: Text(
-                                            cat,
-                                            style: const TextStyle(
-                                              fontWeight: FontWeight.w500,
+                                        child: Row(
+                                          children: [
+                                            Container(
+                                              width: 14,
+                                              height: 14,
+                                              decoration: BoxDecoration(
+                                                color: categoryColors[cat],
+                                                shape: BoxShape.circle,
+                                              ),
                                             ),
-                                          ),
+                                            const SizedBox(width: 8),
+                                            Expanded(
+                                              child: Text(
+                                                cat,
+                                                style: const TextStyle(
+                                                  fontWeight: FontWeight.w500,
+                                                ),
+                                              ),
+                                            ),
+                                            Text(
+                                              'Rp ${NumberFormat.currency(locale: 'id_ID', symbol: '', decimalDigits: 0).format(amount)}',
+                                              style: const TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                            const SizedBox(width: 8),
+                                            Text(
+                                              '${percent.toStringAsFixed(1)}%',
+                                              style: const TextStyle(
+                                                color: Colors.grey,
+                                              ),
+                                            ),
+                                          ],
                                         ),
-                                        Text(
-                                          'Rp ${NumberFormat.currency(locale: 'id_ID', symbol: '', decimalDigits: 0).format(amount)}',
-                                          style: const TextStyle(
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                        const SizedBox(width: 8),
-                                        Text(
-                                          '${percent.toStringAsFixed(1)}%',
-                                          style: const TextStyle(
-                                            color: Colors.grey,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  );
-                                }).toList(),
+                                      );
+                                    })
+                                    .toList(),
                               ),
                             ],
                           ),
@@ -348,8 +357,10 @@ class _BalanceScreenState extends State<BalanceScreen> {
                     const SizedBox(height: 24),
                     const Text(
                       'Top Expenses',
-                      style:
-                      TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     const SizedBox(height: 8),
                     if (top3.isEmpty)
@@ -369,7 +380,7 @@ class _BalanceScreenState extends State<BalanceScreen> {
                             child: ListTile(
                               leading: CircleAvatar(
                                 backgroundColor:
-                                categoryColors[tx.category] ?? Colors.grey,
+                                    categoryColors[tx.category] ?? Colors.grey,
                                 child: const Icon(
                                   Icons.trending_down,
                                   color: Colors.white,
@@ -397,8 +408,7 @@ class _BalanceScreenState extends State<BalanceScreen> {
                                       vertical: 2,
                                     ),
                                     decoration: BoxDecoration(
-                                      color:
-                                      Colors.redAccent.withOpacity(0.1),
+                                      color: Colors.redAccent.withOpacity(0.1),
                                       borderRadius: BorderRadius.circular(8),
                                     ),
                                     child: Text(
@@ -443,10 +453,7 @@ Widget _summaryChip({
       children: [
         Text(
           label,
-          style: const TextStyle(
-            color: Colors.white70,
-            fontSize: 12,
-          ),
+          style: const TextStyle(color: Colors.white70, fontSize: 12),
         ),
         const SizedBox(height: 4),
         Text(

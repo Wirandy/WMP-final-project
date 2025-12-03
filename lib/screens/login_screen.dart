@@ -22,18 +22,34 @@ class _LoginScreenState extends State<LoginScreen>
   late Animation<double> _bgGlowAnimation;
   late Animation<double> _buttonGlowAnimation;
 
+  bool _isLogoVisible = true;
+
   @override
   void initState() {
     super.initState();
-
 
     _animController = AnimationController(
       vsync: this,
       duration: const Duration(seconds: 3),
     )..repeat(reverse: true);
 
-    _bgGlowAnimation = Tween<double>(begin: 0.0, end: 0.25).animate(_animController);
-    _buttonGlowAnimation = Tween<double>(begin: 0.0, end: 8.0).animate(_animController);
+    _bgGlowAnimation = Tween<double>(
+      begin: 0.0,
+      end: 0.25,
+    ).animate(_animController);
+    _buttonGlowAnimation = Tween<double>(
+      begin: 0.0,
+      end: 8.0,
+    ).animate(_animController);
+
+    // Auto-hide logo after 0.5 seconds (was 2s)
+    Future.delayed(const Duration(milliseconds: 500), () {
+      if (mounted) {
+        setState(() {
+          _isLogoVisible = false;
+        });
+      }
+    });
   }
 
   @override
@@ -61,7 +77,6 @@ class _LoginScreenState extends State<LoginScreen>
             ),
           );
         }
-
       } catch (e) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
@@ -85,13 +100,16 @@ class _LoginScreenState extends State<LoginScreen>
     const Color greenColor = Color(0xFF009A6C);
     const Color goldColor = Color(0xFFF5B400);
 
+    final bool isKeyboardOpen = MediaQuery.of(context).viewInsets.bottom > 0;
+    // Logo hidden if keyboard is open OR if timer has finished (_isLogoVisible is false)
+    final bool showLogo = _isLogoVisible && !isKeyboardOpen;
+
     return AnimatedBuilder(
       animation: _animController,
       builder: (context, child) {
         return Scaffold(
           body: Stack(
             children: [
-
               Container(
                 decoration: const BoxDecoration(
                   gradient: LinearGradient(
@@ -102,16 +120,12 @@ class _LoginScreenState extends State<LoginScreen>
                 ),
               ),
 
-
               Opacity(
                 opacity: _bgGlowAnimation.value,
                 child: Container(
                   decoration: BoxDecoration(
                     gradient: RadialGradient(
-                      colors: [
-                        goldColor.withOpacity(0.35),
-                        Colors.transparent,
-                      ],
+                      colors: [goldColor.withOpacity(0.35), Colors.transparent],
                       radius: 0.85,
                       center: const Alignment(0.0, -0.4),
                     ),
@@ -121,16 +135,19 @@ class _LoginScreenState extends State<LoginScreen>
 
               Center(
                 child: SingleChildScrollView(
-                  padding:
-                  const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 32,
+                  ),
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-
-
-                      Container(
+                      AnimatedContainer(
+                        duration: const Duration(milliseconds: 500),
+                        curve: Curves.easeInOut,
                         width: 90,
-                        height: 990,
+                        height: showLogo ? 150 : 0,
+                        margin: EdgeInsets.only(bottom: showLogo ? 16 : 0),
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           gradient: const LinearGradient(
@@ -146,13 +163,15 @@ class _LoginScreenState extends State<LoginScreen>
                             ),
                           ],
                         ),
-                        child: Padding(
-                          padding: const EdgeInsets.all(12.0),
-                          child: Image.asset(
-                            'assets/images/logo_money.png',
-                            fit: BoxFit.contain,
-                          ),
-                        ),
+                        child: isKeyboardOpen
+                            ? null
+                            : Padding(
+                                padding: const EdgeInsets.all(12.0),
+                                child: Image.asset(
+                                  'assets/images/logo_money.png',
+                                  fit: BoxFit.contain,
+                                ),
+                              ),
                       ),
 
                       const SizedBox(height: 16),
@@ -209,7 +228,7 @@ class _LoginScreenState extends State<LoginScreen>
                                 ),
                                 keyboardType: TextInputType.emailAddress,
                                 validator: (value) =>
-                                (value == null || value.isEmpty)
+                                    (value == null || value.isEmpty)
                                     ? 'Please enter email'
                                     : null,
                               ),
@@ -223,7 +242,7 @@ class _LoginScreenState extends State<LoginScreen>
                                 ),
                                 obscureText: true,
                                 validator: (value) =>
-                                (value == null || value.isEmpty)
+                                    (value == null || value.isEmpty)
                                     ? 'Please enter password'
                                     : null,
                               ),
@@ -238,8 +257,11 @@ class _LoginScreenState extends State<LoginScreen>
                                     boxShadow: [
                                       BoxShadow(
                                         color: goldColor.withOpacity(
-                                            0.5 * (_buttonGlowAnimation.value / 8)),
-                                        blurRadius: 8 + _buttonGlowAnimation.value,
+                                          0.5 *
+                                              (_buttonGlowAnimation.value / 8),
+                                        ),
+                                        blurRadius:
+                                            8 + _buttonGlowAnimation.value,
                                         spreadRadius: 1,
                                       ),
                                     ],
@@ -249,7 +271,9 @@ class _LoginScreenState extends State<LoginScreen>
                                     style: ElevatedButton.styleFrom(
                                       backgroundColor: blueColor,
                                       foregroundColor: Colors.white,
-                                      padding: const EdgeInsets.symmetric(vertical: 14),
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 14,
+                                      ),
                                       shape: RoundedRectangleBorder(
                                         borderRadius: BorderRadius.circular(16),
                                       ),
@@ -257,19 +281,19 @@ class _LoginScreenState extends State<LoginScreen>
                                     ),
                                     child: _isLoading
                                         ? const SizedBox(
-                                      height: 24,
-                                      width: 24,
-                                      child: CircularProgressIndicator(
-                                        color: Colors.white,
-                                        strokeWidth: 3,
-                                      ),
-                                    )
+                                            height: 24,
+                                            width: 24,
+                                            child: CircularProgressIndicator(
+                                              color: Colors.white,
+                                              strokeWidth: 3,
+                                            ),
+                                          )
                                         : const Text(
-                                      'Login',
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
+                                            'Login',
+                                            style: TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
                                   ),
                                 ),
                               ),
@@ -280,7 +304,8 @@ class _LoginScreenState extends State<LoginScreen>
                                   Navigator.push(
                                     context,
                                     MaterialPageRoute(
-                                      builder: (context) => const SignUpScreen(),
+                                      builder: (context) =>
+                                          const SignUpScreen(),
                                     ),
                                   );
                                 },

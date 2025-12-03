@@ -33,7 +33,10 @@ class DashboardScreen extends StatelessWidget {
 
           return StreamBuilder<List<TransactionModel>>(
             // PERBAIKAN: Menggunakan 'user.collaborators' (List), bukan partnerId
-            stream: firestoreService.getTransactionsStream(user.uid, user.collaborators),
+            stream: firestoreService.getTransactionsStream(
+              user.uid,
+              user.collaborators,
+            ),
             builder: (context, txSnapshot) {
               if (txSnapshot.connectionState == ConnectionState.waiting) {
                 return const Center(child: CircularProgressIndicator());
@@ -67,7 +70,10 @@ class DashboardScreen extends StatelessWidget {
                         children: [
                           // ===== HEADER =====
                           Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 24.0,
+                              vertical: 16.0,
+                            ),
                             child: Row(
                               mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
@@ -94,7 +100,8 @@ class DashboardScreen extends StatelessWidget {
                                 ),
                                 // Logout Button
                                 GestureDetector(
-                                  onTap: () => context.read<AuthService>().signOut(),
+                                  onTap: () =>
+                                      context.read<AuthService>().signOut(),
                                   child: Container(
                                     padding: const EdgeInsets.all(8),
                                     decoration: BoxDecoration(
@@ -115,7 +122,9 @@ class DashboardScreen extends StatelessWidget {
 
                           // ===== GROUP BALANCE CARD =====
                           Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 20.0),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 20.0,
+                            ),
                             child: Container(
                               padding: const EdgeInsets.all(24),
                               decoration: BoxDecoration(
@@ -133,7 +142,8 @@ class DashboardScreen extends StatelessWidget {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
                                     children: [
                                       // Icon Group & Label
                                       Row(
@@ -141,28 +151,42 @@ class DashboardScreen extends StatelessWidget {
                                           Container(
                                             padding: const EdgeInsets.all(10),
                                             decoration: BoxDecoration(
-                                              color: const Color(0xFF7C4DFF).withOpacity(0.1),
+                                              color: const Color(
+                                                0xFF7C4DFF,
+                                              ).withOpacity(0.1),
                                               shape: BoxShape.circle,
                                             ),
-                                            child: const Icon(Icons.group, color: Color(0xFF7C4DFF)),
+                                            child: const Icon(
+                                              Icons.group,
+                                              color: Color(0xFF7C4DFF),
+                                            ),
                                           ),
                                           const SizedBox(width: 12),
                                           const Text(
                                             'Total Group Balance',
-                                            style: TextStyle(color: Colors.grey, fontSize: 14),
+                                            style: TextStyle(
+                                              color: Colors.grey,
+                                              fontSize: 14,
+                                            ),
                                           ),
                                         ],
                                       ),
                                       // Tombol Kolaborasi
                                       IconButton(
-                                        icon: const Icon(Icons.person_add_alt_1, color: Colors.blue),
+                                        icon: const Icon(
+                                          Icons.person_add_alt_1,
+                                          color: Colors.blue,
+                                        ),
                                         onPressed: () {
                                           Navigator.push(
                                             context,
-                                            MaterialPageRoute(builder: (context) => const CollaborationScreen()),
+                                            MaterialPageRoute(
+                                              builder: (context) =>
+                                                  const CollaborationScreen(),
+                                            ),
                                           );
                                         },
-                                      )
+                                      ),
                                     ],
                                   ),
                                   const SizedBox(height: 24),
@@ -170,14 +194,19 @@ class DashboardScreen extends StatelessWidget {
                                   // LOGIKA BARU: Hitung Saldo Grup (Saya + Semua Teman)
                                   FutureBuilder<List<UserModel>>(
                                     // PERBAIKAN: Menggunakan collaborators dari UserModel baru
-                                    future: firestoreService.getUsersByIds(user.collaborators),
+                                    future: firestoreService.getUsersByIds(
+                                      user.collaborators,
+                                    ),
                                     builder: (context, collaboratorsSnapshot) {
                                       // Jika loading, tampilkan saldo sementara (hanya saldo sendiri)
-                                      if (collaboratorsSnapshot.connectionState == ConnectionState.waiting) {
+                                      if (collaboratorsSnapshot
+                                              .connectionState ==
+                                          ConnectionState.waiting) {
                                         return _buildBalanceText(user.balance);
                                       }
 
-                                      final collaboratorsList = collaboratorsSnapshot.data ?? [];
+                                      final collaboratorsList =
+                                          collaboratorsSnapshot.data ?? [];
 
                                       // Hitung total saldo (Saya + Teman-teman)
                                       double totalGroupBalance = user.balance;
@@ -186,18 +215,25 @@ class DashboardScreen extends StatelessWidget {
                                       }
 
                                       return Column(
-                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
                                         children: [
                                           // Row: Total Saldo & Tombol Isi Saldo
                                           Row(
-                                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.spaceBetween,
                                             children: [
                                               // Text Total Saldo
                                               Text(
-                                                NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0).format(totalGroupBalance),
+                                                NumberFormat.currency(
+                                                  locale: 'id_ID',
+                                                  symbol: 'Rp ',
+                                                  decimalDigits: 0,
+                                                ).format(totalGroupBalance),
                                                 style: const TextStyle(
                                                   color: Color(0xFF00C853),
-                                                  fontSize: 28, // Sedikit dikecilkan agar muat
+                                                  fontSize:
+                                                      28, // Sedikit dikecilkan agar muat
                                                   fontWeight: FontWeight.bold,
                                                 ),
                                               ),
@@ -207,18 +243,38 @@ class DashboardScreen extends StatelessWidget {
                                                   Navigator.push(
                                                     context,
                                                     MaterialPageRoute(
-                                                      builder: (_) => const AddTransactionScreen(initialType: 'income'),
+                                                      builder: (_) =>
+                                                          const AddTransactionScreen(
+                                                            initialType:
+                                                                'income',
+                                                          ),
                                                     ),
                                                   );
                                                 },
-                                                icon: const Icon(Icons.add, size: 14),
-                                                label: const Text("Isi Saldo", style: TextStyle(fontSize: 12)),
+                                                icon: const Icon(
+                                                  Icons.add,
+                                                  size: 14,
+                                                ),
+                                                label: const Text(
+                                                  "Isi Saldo",
+                                                  style: TextStyle(
+                                                    fontSize: 12,
+                                                  ),
+                                                ),
                                                 style: ElevatedButton.styleFrom(
-                                                  backgroundColor: Colors.green.shade50,
+                                                  backgroundColor:
+                                                      Colors.green.shade50,
                                                   foregroundColor: Colors.green,
                                                   elevation: 0,
-                                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                                                  minimumSize: const Size(0, 30),
+                                                  padding:
+                                                      const EdgeInsets.symmetric(
+                                                        horizontal: 10,
+                                                        vertical: 5,
+                                                      ),
+                                                  minimumSize: const Size(
+                                                    0,
+                                                    30,
+                                                  ),
                                                 ),
                                               ),
                                             ],
@@ -228,21 +284,34 @@ class DashboardScreen extends StatelessWidget {
                                           const SizedBox(height: 16),
 
                                           // Rincian Saldo Saya
-                                          _buildSubBalance('My Balance', user.balance),
+                                          _buildSubBalance(
+                                            'My Balance',
+                                            user.balance,
+                                          ),
                                           const SizedBox(height: 8),
 
                                           // List Saldo Teman
                                           if (collaboratorsList.isNotEmpty)
-                                            ...collaboratorsList.map((friend) => Padding(
-                                              padding: const EdgeInsets.only(bottom: 4.0),
-                                              child: _buildSubBalance(
+                                            ...collaboratorsList.map(
+                                              (friend) => Padding(
+                                                padding: const EdgeInsets.only(
+                                                  bottom: 4.0,
+                                                ),
+                                                child: _buildSubBalance(
                                                   '${friend.displayName ?? "Partner"}',
-                                                  friend.balance
+                                                  friend.balance,
+                                                ),
                                               ),
-                                            )),
+                                            ),
 
                                           if (user.collaborators.isEmpty)
-                                            const Text("Belum ada anggota grup", style: TextStyle(color: Colors.grey, fontSize: 12)),
+                                            const Text(
+                                              "Belum ada anggota grup",
+                                              style: TextStyle(
+                                                color: Colors.grey,
+                                                fontSize: 12,
+                                              ),
+                                            ),
                                         ],
                                       );
                                     },
@@ -290,7 +359,11 @@ class DashboardScreen extends StatelessWidget {
 
   Widget _buildBalanceText(double amount) {
     return Text(
-      NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0).format(amount),
+      NumberFormat.currency(
+        locale: 'id_ID',
+        symbol: 'Rp ',
+        decimalDigits: 0,
+      ).format(amount),
       style: const TextStyle(
         color: Color(0xFF00C853),
         fontSize: 32,
@@ -305,8 +378,16 @@ class DashboardScreen extends StatelessWidget {
       children: [
         Text(title, style: const TextStyle(color: Colors.grey, fontSize: 13)),
         Text(
-          NumberFormat.compactCurrency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0).format(amount),
-          style: const TextStyle(color: Colors.black87, fontSize: 14, fontWeight: FontWeight.w600),
+          NumberFormat.compactCurrency(
+            locale: 'id_ID',
+            symbol: 'Rp ',
+            decimalDigits: 0,
+          ).format(amount),
+          style: const TextStyle(
+            color: Colors.black87,
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+          ),
         ),
       ],
     );
@@ -324,7 +405,8 @@ class DashboardScreen extends StatelessWidget {
       dailyTotals[dateKey] = (dailyTotals[dateKey] ?? 0) + amount;
     }
 
-    final sortedKeys = dailyTotals.keys.toList()..sort((a, b) => a.compareTo(b));
+    final sortedKeys = dailyTotals.keys.toList()
+      ..sort((a, b) => a.compareTo(b));
 
     if (sortedKeys.isEmpty) return const SizedBox();
 
@@ -339,12 +421,21 @@ class DashboardScreen extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
-          boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.03), blurRadius: 12, offset: const Offset(0, 6))],
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.03),
+              blurRadius: 12,
+              offset: const Offset(0, 6),
+            ),
+          ],
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Ringkasan Harian', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+            const Text(
+              'Ringkasan Harian',
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
             const SizedBox(height: 12),
             Column(
               children: sortedKeys.map((key) {
@@ -358,7 +449,13 @@ class DashboardScreen extends StatelessWidget {
                     children: [
                       SizedBox(
                         width: 50,
-                        child: Text(DateFormat('dd/MM').format(DateTime.parse(key)), style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                        child: Text(
+                          DateFormat('dd/MM').format(DateTime.parse(key)),
+                          style: const TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey,
+                          ),
+                        ),
                       ),
                       Expanded(
                         child: Row(
@@ -382,7 +479,11 @@ class DashboardScreen extends StatelessWidget {
                         child: Text(
                           NumberFormat.compact(locale: 'id_ID').format(value),
                           textAlign: TextAlign.end,
-                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: value >= 0 ? Colors.green : Colors.red),
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            color: value >= 0 ? Colors.green : Colors.red,
+                          ),
                         ),
                       ),
                     ],
@@ -418,7 +519,10 @@ class DashboardScreen extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text('Transaksi Terakhir', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+          const Text(
+            'Transaksi Terakhir',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
           const SizedBox(height: 12),
           ...grouped.entries.map((entry) {
             return Column(
@@ -426,7 +530,14 @@ class DashboardScreen extends StatelessWidget {
               children: [
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 8.0),
-                  child: Text(entry.key, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.grey)),
+                  child: Text(
+                    entry.key,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.grey,
+                    ),
+                  ),
                 ),
                 ...entry.value.map((tx) => _buildTransactionTile(tx)),
                 const SizedBox(height: 8),
@@ -448,13 +559,24 @@ class DashboardScreen extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [BoxShadow(color: Colors.grey.withOpacity(0.05), spreadRadius: 1, blurRadius: 10, offset: const Offset(0, 4))],
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withOpacity(0.05),
+            spreadRadius: 1,
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Row(
         children: [
           Container(
-            width: 48, height: 48,
-            decoration: BoxDecoration(color: color.withOpacity(0.1), borderRadius: BorderRadius.circular(12)),
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: color.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
             child: Icon(_getCategoryIcon(tx.category), color: color, size: 24),
           ),
           const SizedBox(width: 16),
@@ -462,15 +584,43 @@ class DashboardScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(tx.category, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                Text(
+                  tx.category,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+                Text(
+                  'By: ${tx.userName}',
+                  style: const TextStyle(
+                    color: Colors.blueGrey,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
                 if (tx.description.isNotEmpty)
-                  Text(tx.description, style: const TextStyle(color: Colors.grey, fontSize: 12), maxLines: 1, overflow: TextOverflow.ellipsis),
+                  Text(
+                    tx.description,
+                    style: const TextStyle(color: Colors.grey, fontSize: 12),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
               ],
             ),
           ),
           Text(
-            (isExpense ? '- ' : '+ ') + NumberFormat.currency(locale: 'id_ID', symbol: 'Rp ', decimalDigits: 0).format(tx.amount),
-            style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: color),
+            (isExpense ? '- ' : '+ ') +
+                NumberFormat.currency(
+                  locale: 'id_ID',
+                  symbol: 'Rp ',
+                  decimalDigits: 0,
+                ).format(tx.amount),
+            style: TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
           ),
         ],
       ),
@@ -479,13 +629,26 @@ class DashboardScreen extends StatelessWidget {
 
   IconData _getCategoryIcon(String category) {
     switch (category.toLowerCase()) {
-      case 'makan': case 'makanan': case 'food': return Icons.restaurant;
-      case 'transport': case 'transportasi': return Icons.directions_bus;
-      case 'belanja': case 'shopping': return Icons.shopping_bag;
-      case 'tagihan': case 'bills': return Icons.receipt_long;
-      case 'gaji': case 'income': return Icons.attach_money;
-      case 'kesehatan': return Icons.medical_services;
-      default: return Icons.category;
+      case 'makan':
+      case 'makanan':
+      case 'food':
+        return Icons.restaurant;
+      case 'transport':
+      case 'transportasi':
+        return Icons.directions_bus;
+      case 'belanja':
+      case 'shopping':
+        return Icons.shopping_bag;
+      case 'tagihan':
+      case 'bills':
+        return Icons.receipt_long;
+      case 'gaji':
+      case 'income':
+        return Icons.attach_money;
+      case 'kesehatan':
+        return Icons.medical_services;
+      default:
+        return Icons.category;
     }
   }
 }

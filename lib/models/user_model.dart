@@ -8,6 +8,7 @@ class UserModel {
   // GANTI: Dari partnerId (String) menjadi collaborators (List)
   final List<String> collaborators;
   final String? pendingRequestFrom;
+  final String? pin; // [BARU] PIN Keamanan
 
   UserModel({
     required this.uid,
@@ -16,6 +17,7 @@ class UserModel {
     this.balance = 0.0,
     this.collaborators = const [], // Default list kosong
     this.pendingRequestFrom,
+    this.pin,
   });
 
   factory UserModel.fromFirestore(DocumentSnapshot doc) {
@@ -28,6 +30,7 @@ class UserModel {
       // LOGIKA BARU: Mengambil array dari Firestore dan mengubahnya jadi List<String>
       collaborators: List<String>.from(data['collaborators'] ?? []),
       pendingRequestFrom: data['pendingRequestFrom'],
+      pin: data['pin'],
     );
   }
 
@@ -38,6 +41,7 @@ class UserModel {
       'balance': balance,
       'collaborators': collaborators, // Simpan sebagai list ke database
       'pendingRequestFrom': pendingRequestFrom,
+      'pin': pin,
     };
   }
 }
