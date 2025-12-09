@@ -4,53 +4,47 @@ class TransactionModel {
   final String id;
   final String userId;
   final double amount;
-  final String type; // 'expense' or 'income'
   final String category;
-  final DateTime date;
   final String description;
-  final String userName;
-  final bool isShared;
+  final String type; // 'income' or 'expense'
+  final DateTime date;
+  final bool isGroup; // <--- FIELD BARU KITA
 
   TransactionModel({
-    required this.id,
+    this.id = '',
     required this.userId,
-    required this.userName,
     required this.amount,
-    required this.type,
     required this.category,
-    required this.date,
     required this.description,
-    this.isShared = false,
+    required this.type,
+    required this.date,
+    this.isGroup = false, // Default-nya Personal
   });
 
   factory TransactionModel.fromFirestore(DocumentSnapshot doc) {
-    final data = doc.data() as Map<String, dynamic>? ?? {};
-
+    Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
     return TransactionModel(
       id: doc.id,
       userId: data['userId'] ?? '',
-      userName: data['userName'] ?? 'Unknown',
-      amount: (data['amount'] ?? 0).toDouble(),
-      type: data['type'] ?? 'expense',
-      category: data['category'] ?? 'General',
-      date: (data['date'] is Timestamp)
-          ? (data['date'] as Timestamp).toDate()
-          : DateTime.now(),
+      amount: (data['amount'] ?? 0.0).toDouble(),
+      category: data['category'] ?? 'Lainnya',
       description: data['description'] ?? '',
-      isShared: data['isShared'] ?? false,
+      type: data['type'] ?? 'expense',
+      date: (data['date'] as Timestamp).toDate(),
+      // Ambil data isGroup, kalau tidak ada dianggap false (aman untuk data lama)
+      isGroup: data['isGroup'] ?? false,
     );
   }
 
   Map<String, dynamic> toMap() {
     return {
       'userId': userId,
-      'userName': userName,
       'amount': amount,
-      'type': type,
       'category': category,
-      'date': Timestamp.fromDate(date),
       'description': description,
-      'isShared': isShared,
+      'type': type,
+      'date': date,
+      'isGroup': isGroup, // Simpan ke database
     };
   }
 }

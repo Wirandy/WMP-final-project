@@ -90,6 +90,19 @@ class FirestoreService {
     });
   }
 
+  // [BARU] Menghapus anggota grup
+  Future<void> removeCollaborator(String currentUid, String targetUid) async {
+    // 1. Hapus ID teman dari list kita
+    await _db.collection('users').doc(currentUid).update({
+      'collaborators': FieldValue.arrayRemove([targetUid])
+    });
+
+    // 2. Hapus ID kita dari list teman (agar adil/putus hubungan kedua arah)
+    await _db.collection('users').doc(targetUid).update({
+      'collaborators': FieldValue.arrayRemove([currentUid])
+    });
+  }
+
   // [BARU] Set PIN Keamanan
   Future<void> setPin(String uid, String pin) async {
     await _db.collection('users').doc(uid).update({'pin': pin});

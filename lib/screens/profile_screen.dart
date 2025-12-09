@@ -4,8 +4,10 @@ import '../services/auth_service.dart';
 import '../services/firestore_service.dart';
 import '../services/theme_provider.dart';
 import '../models/user_model.dart';
+import '../models/transaction_model.dart'; // Pastikan import ini ada
 import 'collaboration_screen.dart';
 import 'pin_screen.dart';
+import 'package:intl/intl.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -23,6 +25,7 @@ class ProfileScreen extends StatelessWidget {
         backgroundColor: Colors.transparent,
         title: const Text('Profile'),
       ),
+      // 1. STREAM PERTAMA: Ambil Data User
       body: StreamBuilder<UserModel?>(
         stream: firestoreService.getUserStream(),
         builder: (context, snapshot) {
@@ -39,298 +42,335 @@ class ProfileScreen extends StatelessWidget {
               ? user.displayName![0].toUpperCase()
               : '?';
 
-          return Center(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(16),
-              child: Container(
-                width: 420, // biar di emulator keliatan seperti card
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: theme.colorScheme.surface,
-                  borderRadius: BorderRadius.circular(32),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.05),
-                      blurRadius: 18,
-                      offset: const Offset(0, 8),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // HEADER + AVATAR + INFO
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'My profile',
-                          style: theme.textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        InkWell(
-                          onTap: () {
-                            _showEditProfileDialog(
-                              context,
-                              user,
-                              firestoreService,
-                            );
-                          },
-                          borderRadius: BorderRadius.circular(20),
-                          child: Container(
-                            padding: const EdgeInsets.all(6),
-                            decoration: const BoxDecoration(
-                              color: Color(0xFFE6F9EC),
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(
-                              Icons.edit,
-                              size: 18,
-                              color: Colors.green,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-                    Center(
-                      child: CircleAvatar(
-                        radius: 40,
-                        backgroundColor: Colors.green.shade100,
-                        child: CircleAvatar(
-                          radius: 36,
-                          backgroundColor: Colors.green.shade600,
-                          child: Text(
-                            initialLetter,
-                            style: const TextStyle(
-                              fontSize: 32,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    Center(
-                      child: Text(
-                        user.displayName ?? 'No Name',
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                    Center(
-                      child: Text(
-                        user.email,
-                        style: const TextStyle(
-                          fontSize: 13,
-                          color: Colors.grey,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Center(
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 4,
-                        ),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFE6F9EC),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: const Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              Icons.workspace_premium,
-                              size: 14,
-                              color: Colors.green,
-                            ),
-                            SizedBox(width: 4),
-                            Text(
-                              'Account tier 3',
-                              style: TextStyle(
-                                fontSize: 11,
-                                color: Colors.green,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 24),
+          // 2. STREAM KEDUA: Ambil Data Transaksi (Nested)
+          return StreamBuilder<List<TransactionModel>>(
+              stream: firestoreService.getTransactionsStream(user.uid, user.collaborators),
+              builder: (context, txSnapshot) {
+                final transactions = txSnapshot.data ?? [];
 
-                    // ACCOUNT DETAILS CARD
-                    Container(
-                      padding: const EdgeInsets.all(14),
+                // --- LOGIKA HITUNG SALDO (DIPINDAH KE SINI) ---
+                // Filter: Hanya transaksi milik user ini (user.uid) DAN bukan grup (!isGroup)
+                final myTransactions = transactions.where((tx) => tx.userId == user.uid && !tx.isGroup);
+
+                double myIncome = myTransactions
+                    .where((tx) => tx.type == 'income')
+                    .fold(0, (sum, tx) => sum + tx.amount);
+
+                double myExpense = myTransactions
+                    .where((tx) => tx.type == 'expense')
+                    .fold(0, (sum, tx) => sum + tx.amount);
+
+                // INI HASILNYA
+                double myBalance = myIncome - myExpense;
+                // ---------------------------------------------
+
+                return Center(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(16),
+                    child: Container(
+                      width: 420,
+                      padding: const EdgeInsets.all(20),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFF9FAFB),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: const Color(0xFFE5E7EB)),
+                        color: theme.colorScheme.surface,
+                        borderRadius: BorderRadius.circular(32),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.05),
+                            blurRadius: 18,
+                            offset: const Offset(0, 8),
+                          ),
+                        ],
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+                          // HEADER + AVATAR + INFO
                           Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              const Text(
-                                'Account details',
-                                style: TextStyle(fontWeight: FontWeight.w600),
-                              ),
                               Text(
-                                'Transactions',
-                                style: TextStyle(
-                                  color: Colors.green.shade600,
-                                  fontWeight: FontWeight.w600,
+                                'My profile',
+                                style: theme.textTheme.titleLarge?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                              InkWell(
+                                onTap: () {
+                                  _showEditProfileDialog(
+                                    context,
+                                    user,
+                                    firestoreService,
+                                  );
+                                },
+                                borderRadius: BorderRadius.circular(20),
+                                child: Container(
+                                  padding: const EdgeInsets.all(6),
+                                  decoration: const BoxDecoration(
+                                    color: Color(0xFFE6F9EC),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(
+                                    Icons.edit,
+                                    size: 18,
+                                    color: Colors.green,
+                                  ),
                                 ),
                               ),
                             ],
                           ),
-                          const SizedBox(height: 12),
-                          Text(
-                            user.displayName ?? '',
-                            style: const TextStyle(fontWeight: FontWeight.w500),
-                          ),
-                          const SizedBox(height: 4),
-                          Text(
-                            user.email,
-                            style: const TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey,
+                          const SizedBox(height: 16),
+                          Center(
+                            child: CircleAvatar(
+                              radius: 40,
+                              backgroundColor: Colors.green.shade100,
+                              child: CircleAvatar(
+                                radius: 36,
+                                backgroundColor: Colors.green.shade600,
+                                child: Text(
+                                  initialLetter,
+                                  style: const TextStyle(
+                                    fontSize: 32,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                              ),
                             ),
                           ),
                           const SizedBox(height: 12),
-                          Row(
-                            children: [
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
+                          Center(
+                            child: Text(
+                              user.displayName ?? 'No Name',
+                              style: const TextStyle(
+                                fontSize: 18,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
+                          Center(
+                            child: Text(
+                              user.email,
+                              style: const TextStyle(
+                                fontSize: 13,
+                                color: Colors.grey,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Center(
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 4,
+                              ),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFE6F9EC),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: const Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(
+                                    Icons.workspace_premium,
+                                    size: 14,
+                                    color: Colors.green,
+                                  ),
+                                  SizedBox(width: 4),
+                                  Text(
+                                    'Account tier 3',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: Colors.green,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+
+                          // ACCOUNT DETAILS CARD
+                          Container(
+                            padding: const EdgeInsets.all(14),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF9FAFB),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(color: const Color(0xFFE5E7EB)),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                   children: [
                                     const Text(
-                                      'Account balance',
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        color: Colors.grey,
-                                      ),
+                                      'Account details',
+                                      style: TextStyle(fontWeight: FontWeight.w600),
                                     ),
-                                    const SizedBox(height: 4),
                                     Text(
-                                      'Rp ${user.balance.toStringAsFixed(0)}',
-                                      style: const TextStyle(
+                                      'Transactions',
+                                      style: TextStyle(
+                                        color: Colors.green.shade600,
                                         fontWeight: FontWeight.w600,
                                       ),
                                     ),
                                   ],
                                 ),
-                              ),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: const [
-                                    Text(
-                                      'Amount saved',
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        color: Colors.grey,
+                                const SizedBox(height: 12),
+                                Text(
+                                  user.displayName ?? '',
+                                  style: const TextStyle(fontWeight: FontWeight.w500),
+                                ),
+                                const SizedBox(height: 4),
+                                Text(
+                                  user.email,
+                                  style: const TextStyle(
+                                    fontSize: 12,
+                                    color: Colors.grey,
+                                  ),
+                                ),
+                                const SizedBox(height: 12),
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          const Text(
+                                            'Account balance',
+                                            style: TextStyle(
+                                              fontSize: 11,
+                                              color: Colors.grey,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            NumberFormat.currency(
+                                                locale: 'id_ID',
+                                                symbol: 'Rp ',
+                                                decimalDigits: 0
+                                            ).format(myBalance), // SUDAH BENAR
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.w600,
+                                              fontSize: 16,
+                                            ),
+                                          ),
+                                        ],
                                       ),
                                     ),
-                                    SizedBox(height: 4),
-                                    Text(
-                                      'Rp 0',
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.w600,
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          const Text(
+                                            'Amount saved',
+                                            style: TextStyle(
+                                              fontSize: 11,
+                                              color: Colors.grey,
+                                            ),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            // Update: Menampilkan Total Income
+                                            NumberFormat.currency(
+                                                locale: 'id_ID',
+                                                symbol: 'Rp ',
+                                                decimalDigits: 0
+                                            ).format(myIncome),
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.w600,
+                                            ),
+                                          ),
+                                        ],
                                       ),
                                     ),
                                   ],
                                 ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+
+                          // MENU ITEMS
+                          _profileMenuItem(
+                            icon: Icons.lock_outline,
+                            color: const Color(0xFF2563EB),
+                            title: 'Password',
+                            subtitle: 'Change your password here.',
+                            onTap: () => _showChangePasswordDialog(context),
+                          ),
+
+                          _profileMenuItem(
+                            icon: Icons.lock_outline,
+                            color: const Color(0xFF8B5CF6),
+                            title: 'App PIN',
+                            subtitle: 'Change your security PIN.',
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) =>
+                                  const PinScreen(mode: PinMode.update),
+                                ),
+                              );
+                            },
+                          ),
+
+                          const SizedBox(height: 12),
+
+                          // Collaboration
+                          _profileMenuItem(
+                            icon: Icons.group_add,
+                            color: Colors.blue,
+                            title: 'Collaboration',
+                            subtitle: 'Manage partner collaboration',
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const CollaborationScreen(),
+                                ),
+                              );
+                            },
+                          ),
+                          // Dark Mode
+                          _profileMenuItem(
+                            icon: Icons.dark_mode,
+                            color: Colors.purple,
+                            title: 'Dark Mode',
+                            subtitle: themeProvider.isDark ? 'On' : 'Off',
+                            onTap: () {
+                              final newVal = !themeProvider.isDark;
+                              context.read<ThemeProvider>().toggle(newVal);
+                            },
+                            trailing: Switch(
+                              value: themeProvider.isDark,
+                              onChanged: (val) {
+                                context.read<ThemeProvider>().toggle(val);
+                              },
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+
+                          // Logout
+                          Center(
+                            child: TextButton.icon(
+                              onPressed: () async {
+                                await context.read<AuthService>().signOut();
+                              },
+                              icon: const Icon(Icons.logout, color: Colors.red),
+                              label: const Text(
+                                'Logout',
+                                style: TextStyle(color: Colors.red),
                               ),
-                            ],
+                            ),
                           ),
                         ],
                       ),
                     ),
-                    const SizedBox(height: 20),
-
-                    // MENU ITEMS
-                    _profileMenuItem(
-                      icon: Icons.lock_outline,
-                      color: const Color(0xFF2563EB),
-                      title: 'Password',
-                      subtitle: 'Change your password here.',
-                      onTap: () => _showChangePasswordDialog(context),
-                    ),
-
-                    _profileMenuItem(
-                      icon: Icons.lock_outline,
-                      color: const Color(0xFF8B5CF6),
-                      title: 'App PIN',
-                      subtitle: 'Change your security PIN.',
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) =>
-                                const PinScreen(mode: PinMode.update),
-                          ),
-                        );
-                      },
-                    ),
-
-                    const SizedBox(height: 12),
-
-                    // Collaboration + Dark mode + Logout seperti sebelumnya
-                    _profileMenuItem(
-                      icon: Icons.group_add,
-                      color: Colors.blue,
-                      title: 'Collaboration',
-                      subtitle: 'Manage partner collaboration',
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const CollaborationScreen(),
-                          ),
-                        );
-                      },
-                    ),
-                    _profileMenuItem(
-                      icon: Icons.dark_mode,
-                      color: Colors.purple,
-                      title: 'Dark Mode',
-                      subtitle: themeProvider.isDark ? 'On' : 'Off',
-                      onTap: () {
-                        final newVal = !themeProvider.isDark;
-                        context.read<ThemeProvider>().toggle(newVal);
-                      },
-                      trailing: Switch(
-                        value: themeProvider.isDark,
-                        onChanged: (val) {
-                          context.read<ThemeProvider>().toggle(val);
-                        },
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Center(
-                      child: TextButton.icon(
-                        onPressed: () async {
-                          await context.read<AuthService>().signOut();
-                        },
-                        icon: const Icon(Icons.logout, color: Colors.red),
-                        label: const Text(
-                          'Logout',
-                          style: TextStyle(color: Colors.red),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
+                  ),
+                );
+              }
           );
         },
       ),
@@ -340,10 +380,10 @@ class ProfileScreen extends StatelessWidget {
   // ====== DIALOGS & WIDGET HELPER ======
 
   void _showEditProfileDialog(
-    BuildContext context,
-    UserModel user,
-    FirestoreService firestoreService,
-  ) {
+      BuildContext context,
+      UserModel user,
+      FirestoreService firestoreService,
+      ) {
     final nameController = TextEditingController(text: user.displayName ?? '');
     final emailController = TextEditingController(text: user.email);
 
@@ -388,8 +428,6 @@ class ProfileScreen extends StatelessWidget {
                   Navigator.pop(context);
                   return;
                 }
-
-                // sementara UI only
                 if (context.mounted) {
                   Navigator.pop(context);
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -471,8 +509,6 @@ class ProfileScreen extends StatelessWidget {
                   );
                   return;
                 }
-
-                // sementara belum konek backend
                 if (context.mounted) {
                   Navigator.pop(context);
                   ScaffoldMessenger.of(context).showSnackBar(

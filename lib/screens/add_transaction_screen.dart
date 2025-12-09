@@ -4,9 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:intl/intl.dart';
 
 class AddTransactionScreen extends StatefulWidget {
-  // Tambahan: Menerima parameter awal (biar bisa otomatis pilih Pemasukan/Pengeluaran)
   final String? initialType;
-
   const AddTransactionScreen({super.key, this.initialType});
 
   @override
@@ -20,14 +18,13 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   String _selectedCategory = 'Makan';
   String _type = 'expense';
   DateTime _selectedDate = DateTime.now();
+  bool _isGroupTransaction = false; // <--- Variabel untuk Switch
 
   @override
   void initState() {
     super.initState();
-    // Jika ada request tipe awal (misal dari tombol 'Isi Saldo'), pakai itu
     if (widget.initialType != null) {
       _type = widget.initialType!;
-      // Jika pemasukan, ubah kategori default biar sesuai
       if (_type == 'income') _selectedCategory = 'Gaji';
     }
   }
@@ -48,62 +45,32 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
 
   Future<void> _saveTransaction() async {
     if (_amountController.text.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Harap isi nominal!')));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Harap isi nominal!')));
       return;
     }
 
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
 
-    CollectionReference transactions = FirebaseFirestore.instance.collection(
-      'transactions',
-    );
+    CollectionReference transactions = FirebaseFirestore.instance.collection('transactions');
 
     try {
-      String nameToUse = user.displayName ?? '';
-      if (nameToUse.isEmpty) {
-        nameToUse = user.email ?? 'User';
-      }
-
       await transactions.add({
         'userId': user.uid,
-        'userName': nameToUse,
         'amount': double.parse(_amountController.text),
         'category': _selectedCategory,
         'description': _descController.text,
         'type': _type,
         'date': _selectedDate,
-        'isShared': false,
+        'isGroup': _isGroupTransaction, // <--- Simpan status Grup/Pribadi
       });
 
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(const SnackBar(content: Text('Data Berhasil Disimpan')));
-        // Update saldo user
-        final userRef = FirebaseFirestore.instance
-            .collection('users')
-            .doc(user.uid);
-
-        double amount = double.parse(_amountController.text);
-
-        // Kalau income → tambah saldo
-        if (_type == 'income') {
-          await userRef.update({'balance': FieldValue.increment(amount)});
-        }
-
-        // Kalau expense → kurangi saldo
-        if (_type == 'expense') {
-          await userRef.update({'balance': FieldValue.increment(-amount)});
-        }
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Data Berhasil Disimpan')));
         Navigator.pop(context);
       }
     } catch (error) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Gagal: $error')));
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Gagal: $error')));
     }
   }
 
@@ -111,9 +78,7 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(
-          _type == 'income' ? "Tambah Pemasukan" : "Catat Pengeluaran",
-        ),
+        title: Text(_type == 'income' ? "Tambah Pemasukan" : "Catat Pengeluaran"),
         backgroundColor: _type == 'income' ? Colors.green : Colors.red,
         foregroundColor: Colors.white,
       ),
@@ -126,41 +91,44 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
               // Pilihan Tipe
               SegmentedButton<String>(
                 segments: const [
-                  ButtonSegment(
-                    value: 'expense',
-                    label: Text('Pengeluaran'),
-                    icon: Icon(Icons.arrow_downward),
-                  ),
-                  ButtonSegment(
-                    value: 'income',
-                    label: Text('Pemasukan'),
-                    icon: Icon(Icons.arrow_upward),
-                  ),
+                  ButtonSegment(value: 'expense', label: Text('Pengeluaran'), icon: Icon(Icons.arrow_downward)),
+                  ButtonSegment(value: 'income', label: Text('Pemasukan'), icon: Icon(Icons.arrow_upward)),
                 ],
                 selected: {_type},
                 onSelectionChanged: (Set<String> newSelection) {
                   setState(() {
                     _type = newSelection.first;
-                    // Reset kategori agar masuk akal
-                    if (_type == 'income')
-                      _selectedCategory = 'Gaji';
-                    else
-                      _selectedCategory = 'Makan';
+                    if (_type == 'income') _selectedCategory = 'Gaji';
+                    else _selectedCategory = 'Makan';
                   });
                 },
                 style: ButtonStyle(
                   backgroundColor: MaterialStateProperty.resolveWith((states) {
                     if (states.contains(MaterialState.selected)) {
-                      return _type == 'expense'
-                          ? Colors.red.shade100
-                          : Colors.green.shade100;
+                      return _type == 'expense' ? Colors.red.shade100 : Colors.green.shade100;
                     }
                     return null;
                   }),
                 ),
               ),
-
               const SizedBox(height: 20),
+
+              // SWITCH BARU: TRANSAKSI GRUP ATAU PRIBADI
+              SwitchListTile(
+                title: const Text("Transaksi Grup?", style: TextStyle(fontWeight: FontWeight.bold)),
+                subtitle: Text(_isGroupTransaction
+                    ? "Akan masuk ke Saldo Bersama"
+                    : "Hanya masuk ke Saldo Pribadi"),
+                value: _isGroupTransaction,
+                activeColor: Colors.blue,
+                onChanged: (bool value) {
+                  setState(() {
+                    _isGroupTransaction = value;
+                  });
+                },
+              ),
+              const Divider(),
+              const SizedBox(height: 10),
 
               // Input Nominal
               TextField(
@@ -170,15 +138,8 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                   labelText: "Nominal (Rp)",
                   border: const OutlineInputBorder(),
                   prefixIcon: const Icon(Icons.attach_money),
-                  focusedBorder: OutlineInputBorder(
-                    borderSide: BorderSide(
-                      color: _type == 'income' ? Colors.green : Colors.red,
-                      width: 2,
-                    ),
-                  ),
                 ),
               ),
-
               const SizedBox(height: 15),
 
               // Input Tanggal
@@ -207,16 +168,8 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
                   prefixIcon: Icon(Icons.category),
                 ),
                 items: _type == 'expense'
-                    ? ['Makan', 'Transport', 'Belanja', 'Tagihan', 'Lainnya']
-                          .map(
-                            (e) => DropdownMenuItem(value: e, child: Text(e)),
-                          )
-                          .toList()
-                    : ['Gaji', 'Bonus', 'Investasi', 'Lainnya']
-                          .map(
-                            (e) => DropdownMenuItem(value: e, child: Text(e)),
-                          )
-                          .toList(),
+                    ? ['Makan', 'Transport', 'Belanja', 'Tagihan', 'Lainnya'].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList()
+                    : ['Gaji', 'Bonus', 'Investasi', 'Lainnya'].map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
                 onChanged: (v) => setState(() => _selectedCategory = v!),
               ),
               const SizedBox(height: 15),
@@ -232,21 +185,15 @@ class _AddTransactionScreenState extends State<AddTransactionScreen> {
               ),
               const SizedBox(height: 25),
 
-              // Tombol Simpan
               ElevatedButton(
                 onPressed: _saveTransaction,
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 16),
-                  backgroundColor: _type == 'expense'
-                      ? Colors.red
-                      : Colors.green,
+                  backgroundColor: _type == 'expense' ? Colors.red : Colors.green,
                   foregroundColor: Colors.white,
                 ),
-                child: const Text(
-                  "SIMPAN DATA",
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                ),
-              ),
+                child: const Text("SIMPAN DATA", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+              )
             ],
           ),
         ),
