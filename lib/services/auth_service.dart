@@ -60,4 +60,22 @@ class AuthService {
   Future<void> signOut() async {
     await _auth.signOut();
   }
+
+  // [BARU] Fitur Ganti Password
+  Future<void> changePassword(String currentPassword, String newPassword) async {
+    final user = _auth.currentUser;
+    if (user == null) return;
+
+    // 1. Re-authenticate (Verifikasi password lama)
+    // Firebase mewajibkan user login ulang sebelum ganti password penting
+    final cred = EmailAuthProvider.credential(
+        email: user.email!,
+        password: currentPassword
+    );
+
+    await user.reauthenticateWithCredential(cred);
+
+    // 2. Update Password Baru
+    await user.updatePassword(newPassword);
+  }
 }

@@ -497,26 +497,57 @@ class ProfileScreen extends StatelessWidget {
                 final newPw = newPwController.text.trim();
                 final confirmPw = confirmPwController.text.trim();
 
+                // Validasi Input Kosong
                 if (currentPw.isEmpty || newPw.isEmpty || confirmPw.isEmpty) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Please fill in all fields')),
+                  );
                   return;
                 }
+
+                // Validasi Password Baru Cocok
                 if (newPw != confirmPw) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
                       content: Text('New passwords do not match'),
-                      backgroundColor: Colors.orangeAccent,
+                      backgroundColor: Colors.orange,
                     ),
                   );
                   return;
                 }
-                if (context.mounted) {
-                  Navigator.pop(context);
+
+                // Validasi Panjang Password (Firebase butuh min 6)
+                if (newPw.length < 6) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Change password not implemented yet'),
-                      backgroundColor: Colors.blueGrey,
-                    ),
+                    const SnackBar(content: Text('Password must be at least 6 characters')),
                   );
+                  return;
+                }
+
+                // --- EKSEKUSI KE FIREBASE ---
+                try {
+                  // Panggil fungsi di AuthService
+                  await context.read<AuthService>().changePassword(currentPw, newPw);
+
+                  if (context.mounted) {
+                    Navigator.pop(context); // Tutup Dialog
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Password changed successfully! ✅'),
+                        backgroundColor: Colors.green,
+                      ),
+                    );
+                  }
+                } catch (e) {
+                  // Jika Password Lama Salah atau Error Lain
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Failed: $e'), // Biasanya karena "Wrong Password"
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
                 }
               },
             ),
