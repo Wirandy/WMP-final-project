@@ -94,12 +94,12 @@ class FirestoreService {
   Future<void> removeCollaborator(String currentUid, String targetUid) async {
     // 1. Hapus ID teman dari list kita
     await _db.collection('users').doc(currentUid).update({
-      'collaborators': FieldValue.arrayRemove([targetUid])
+      'collaborators': FieldValue.arrayRemove([targetUid]),
     });
 
     // 2. Hapus ID kita dari list teman (agar adil/putus hubungan kedua arah)
     await _db.collection('users').doc(targetUid).update({
-      'collaborators': FieldValue.arrayRemove([currentUid])
+      'collaborators': FieldValue.arrayRemove([currentUid]),
     });
   }
 
@@ -192,7 +192,16 @@ class FirestoreService {
     if (existing.docs.isNotEmpty)
       throw Exception('Request sudah dikirim sebelumnya');
 
-    // 3. Buat request baru
+    // [BARU] 3. Cek apakah user SUDAH menjadi collaborator
+    final senderDoc = await _db.collection('users').doc(fromUid).get();
+    if (senderDoc.exists) {
+      final senderData = UserModel.fromFirestore(senderDoc);
+      if (senderData.collaborators.contains(targetUser.uid)) {
+        throw Exception('User ini sudah ada di dalam grup Anda');
+      }
+    }
+
+    // 4. Buat request baru
     await _db.collection('requests').add({
       'fromUid': fromUid,
       'fromEmail': fromEmail,
@@ -215,7 +224,7 @@ class FirestoreService {
         );
   }
 
-  // Terima Request
+  // Terima Request (Updated: Bi-Directional Mesh Logic)
   Future<void> acceptRequest(
     String requestId,
     String fromUid,
@@ -223,20 +232,67 @@ class FirestoreService {
   ) async {
     final batch = _db.batch();
 
-    // 1. Update status request jadi 'accepted'
+    // 1. Ambil data KEDUA PIHAK (Pengirim & Penerima)
+    final senderDoc = await _db.collection('users').doc(fromUid).get();
+    final receiverDoc = await _db.collection('users').doc(myUid).get();
+
+    if (!senderDoc.exists || !receiverDoc.exists)
+      throw Exception("Data user tidak ditemukan");
+
+    final senderData = UserModel.fromFirestore(senderDoc);
+    final receiverData = UserModel.fromFirestore(receiverDoc);
+
+    final List<String> senderFriends = senderData.collaborators;
+    final List<String> receiverFriends = receiverData.collaborators;
+
+    // 2. Update status request
     final reqRef = _db.collection('requests').doc(requestId);
     batch.update(reqRef, {'status': 'accepted'});
 
-    // 2. Saling add collaborators (Logic lama dipindah kesini)
-    final myRef = _db.collection('users').doc(myUid);
-    final partnerRef = _db.collection('users').doc(fromUid);
+    // 3. Hubungkan UTAMA (Sender <-> Receiver)
+    final senderRef = _db.collection('users').doc(fromUid);
+    final receiverRef = _db.collection('users').doc(myUid);
 
-    batch.update(myRef, {
+    batch.update(receiverRef, {
       'collaborators': FieldValue.arrayUnion([fromUid]),
     });
-    batch.update(partnerRef, {
+    batch.update(senderRef, {
       'collaborators': FieldValue.arrayUnion([myUid]),
     });
+
+    // 4. MESH LOGIC: Gabungkan Semua Teman
+
+    // A. Hubungkan SENDER ke semua teman RECEIVER
+    for (String friendId in receiverFriends) {
+      if (friendId == fromUid) continue; // Skip jika sudah ada
+
+      final friendRef = _db.collection('users').doc(friendId);
+
+      // Tambahkan Sender ke Teman Receiver
+      batch.update(friendRef, {
+        'collaborators': FieldValue.arrayUnion([fromUid]),
+      });
+      // Tambahkan Teman Receiver ke Sender
+      batch.update(senderRef, {
+        'collaborators': FieldValue.arrayUnion([friendId]),
+      });
+    }
+
+    // B. Hubungkan RECEIVER ke semua teman SENDER
+    for (String friendId in senderFriends) {
+      if (friendId == myUid) continue;
+
+      final friendRef = _db.collection('users').doc(friendId);
+
+      // Tambahkan Receiver ke Teman Sender
+      batch.update(friendRef, {
+        'collaborators': FieldValue.arrayUnion([myUid]),
+      });
+      // Tambahkan Teman Sender ke Receiver
+      batch.update(receiverRef, {
+        'collaborators': FieldValue.arrayUnion([friendId]),
+      });
+    }
 
     await batch.commit();
   }

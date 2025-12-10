@@ -1,0 +1,37 @@
+{
+    "indexes": [
+        {
+            "collectionGroup": "requests",
+            "queryScope": "COLLECTION",
+            "fields": [
+                {
+                    "fieldPath": "fromUid",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "toEmail",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "status",
+                    "order": "ASCENDING"
+                }
+            ]
+        },
+        {
+            "collectionGroup": "requests",
+            "queryScope": "COLLECTION",
+            "fields": [
+                {
+                    "fieldPath": "toEmail",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "status",
+                    "order": "ASCENDING"
+                }
+            ]
+        }
+    ],
+    "fieldOverrides": []
+}

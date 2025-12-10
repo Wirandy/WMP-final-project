@@ -41,29 +41,29 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyBCTsDi1Gxvbkyu6x6GAIAB5GGXFPeLBu4',
-    appId: '1:205603761672:web:4e86c0abde85739b262bbd',
-    messagingSenderId: '205603761672',
-    projectId: 'money-mgt-7be3a',
-    authDomain: 'money-mgt-7be3a.firebaseapp.com',
-    storageBucket: 'money-mgt-7be3a.firebasestorage.app',
-    measurementId: 'G-MB8YQHTV62',
+    apiKey: 'AIzaSyBcgAQ1pgoxGIvMFC2cgcZ74BBwXlNjx8g',
+    appId: '1:599311229904:web:ebfa3f787a7b52f28a4fd5',
+    messagingSenderId: '599311229904',
+    projectId: 'wmp-final-bc9a6',
+    authDomain: 'wmp-final-bc9a6.firebaseapp.com',
+    storageBucket: 'wmp-final-bc9a6.firebasestorage.app',
+    measurementId: 'G-77MXPZKXVV',
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyCidiPcrE5RgWfMnu3soHTgEeEKcIg8p54',
-    appId: '1:205603761672:android:81aeea75b3a6f9b5262bbd',
-    messagingSenderId: '205603761672',
-    projectId: 'money-mgt-7be3a',
-    storageBucket: 'money-mgt-7be3a.firebasestorage.app',
+    apiKey: 'AIzaSyAfjWYwyPLfFtAxEznYdVY7F2uRcFTr85k',
+    appId: '1:599311229904:android:07b77cc2d95d4a9f8a4fd5',
+    messagingSenderId: '599311229904',
+    projectId: 'wmp-final-bc9a6',
+    storageBucket: 'wmp-final-bc9a6.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyA0jMjxASB0x2A5Gr2lt_UzxMx3-juj16Y',
-    appId: '1:205603761672:ios:3bb51e412ed77133262bbd',
-    messagingSenderId: '205603761672',
-    projectId: 'money-mgt-7be3a',
-    storageBucket: 'money-mgt-7be3a.firebasestorage.app',
+    apiKey: 'AIzaSyBr2U_L_xz0VKmJooWjIZ1N8QXcXO5kdTQ',
+    appId: '1:599311229904:ios:d0f380d5a2d069b28a4fd5',
+    messagingSenderId: '599311229904',
+    projectId: 'wmp-final-bc9a6',
+    storageBucket: 'wmp-final-bc9a6.firebasestorage.app',
     iosBundleId: 'com.example.moneymanager.moneyManager',
   );
 
@@ -77,12 +77,13 @@ class DefaultFirebaseOptions {
   );
 
   static const FirebaseOptions windows = FirebaseOptions(
-    apiKey: 'AIzaSyBCTsDi1Gxvbkyu6x6GAIAB5GGXFPeLBu4',
-    appId: '1:205603761672:web:bbfa97182c2f6a0b262bbd',
-    messagingSenderId: '205603761672',
-    projectId: 'money-mgt-7be3a',
-    authDomain: 'money-mgt-7be3a.firebaseapp.com',
-    storageBucket: 'money-mgt-7be3a.firebasestorage.app',
-    measurementId: 'G-X95C7SKGMV',
+    apiKey: 'AIzaSyBcgAQ1pgoxGIvMFC2cgcZ74BBwXlNjx8g',
+    appId: '1:599311229904:web:84eb1d10cc0ebe458a4fd5',
+    messagingSenderId: '599311229904',
+    projectId: 'wmp-final-bc9a6',
+    authDomain: 'wmp-final-bc9a6.firebaseapp.com',
+    storageBucket: 'wmp-final-bc9a6.firebasestorage.app',
+    measurementId: 'G-PD4PJF4E53',
   );
+
 }

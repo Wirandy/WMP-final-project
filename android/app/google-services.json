@@ -1,32 +1,13 @@
 {
   "project_info": {
-    "project_number": "205603761672",
-    "project_id": "money-mgt-7be3a",
-    "storage_bucket": "money-mgt-7be3a.firebasestorage.app"
+    "project_number": "599311229904",
+    "project_id": "wmp-final-bc9a6",
+    "storage_bucket": "wmp-final-bc9a6.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:205603761672:android:52003fba72c1bfa2262bbd",
-        "android_client_info": {
-          "package_name": "com.example.money_mgt"
-        }
-      },
-      "oauth_client": [],
-      "api_key": [
-        {
-          "current_key": "AIzaSyCidiPcrE5RgWfMnu3soHTgEeEKcIg8p54"
-        }
-      ],
-      "services": {
-        "appinvite_service": {
-          "other_platform_oauth_client": []
-        }
-      }
-    },
-    {
-      "client_info": {
-        "mobilesdk_app_id": "1:205603761672:android:81aeea75b3a6f9b5262bbd",
+        "mobilesdk_app_id": "1:599311229904:android:07b77cc2d95d4a9f8a4fd5",
         "android_client_info": {
           "package_name": "com.example.moneymanager.money_manager"
         }
@@ -34,7 +15,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyCidiPcrE5RgWfMnu3soHTgEeEKcIg8p54"
+          "current_key": "AIzaSyAfjWYwyPLfFtAxEznYdVY7F2uRcFTr85k"
         }
       ],
       "services": {
